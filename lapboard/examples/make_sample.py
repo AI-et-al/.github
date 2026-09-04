@@ -75,8 +75,12 @@ def generate(hours=16.0, laps=99, seed=7, start=None, decode_tok_s=62.0, prefill
 
     total_budget = hours * 3600.0
     lap_target = total_budget / laps
-    context = 18_000  # tokens currently in the conversation
+    CPT = 3.5
+    context = 0             # tokens currently cached (the prompt prefix the API will read back)
+    pending_chars = 0       # characters emitted since the last model call (computed at the next one)
+    prev_think = 0
     weights = [w for _, w, _, _, _ in TOOLS]
+    system_chars = 0
 
     system_prompt = ["You are an interactive agent that helps users with software engineering tasks. " * 30,
                      "# Environment\n" + "Working directory: /home/dev/port. Platform: linux. " * 12,
@@ -88,22 +92,27 @@ def generate(hours=16.0, laps=99, seed=7, start=None, decode_tok_s=62.0, prefill
                   "layer, and keep going until every layer passes." if lap == 1 else
                   f"continue (lap {lap}): pick up where you left off")
         emit({"type": "user", "message": {"role": "user", "content": prompt}}, t)
+        pending_chars += len(prompt)
         if lap == 1:
+            r1 = "<system-reminder>\n" + skill_listing + "\n</system-reminder>"
+            r2 = "<system-reminder>deferred tools: " + ", ".join(deferred) + "</system-reminder>"
             emit({"type": "attachment", "attachment": {"type": "skill_listing", "content": skill_listing, "skillCount": 40, "isInitial": True},
-                  "rendered": [{"content": "<system-reminder>\n" + skill_listing + "\n</system-reminder>"}]}, t)
+                  "rendered": [{"content": r1}]}, t)
             emit({"type": "attachment", "attachment": {"type": "deferred_tools_delta", "addedNames": deferred, "removedNames": []},
-                  "rendered": [{"content": "<system-reminder>deferred tools: " + ", ".join(deferred) + "</system-reminder>"}]}, t)
-            context += (len(skill_listing) + 20 * len(deferred)) // 4
+                  "rendered": [{"content": r2}]}, t)
+            pending_chars += len(r1) + len(r2)
+            system_chars = sum(len(x) for x in system_prompt)
+            pending_chars += system_chars + 40_000 * CPT  # system prompt + a 40k-token built-in tool block
         emit({"type": "attachment", "attachment": {"type": "prompt_snapshot", "systemPrompt": system_prompt, "hostPrompt": "h"}}, t)
-        context += 40
         lap_end = t + timedelta(seconds=lap_target * lognormal(rng, 1.0, 0.25))
         while True:
             # ---- one model call; the last call of a lap ends the turn without tools
             last_call = t >= lap_end
             req = "req_" + uuid.UUID(int=rng.getrandbits(128)).hex[:20]
             msg_id = "msg_" + uuid.UUID(int=rng.getrandbits(128)).hex[:20]
-            computed = int(lognormal(rng, 900, 0.8))
+            computed = max(3, int(pending_chars / CPT) + prev_think)
             cached = context
+            pending_chars = 0
             think = int(lognormal(rng, 350, 1.1)) if rng.random() < 0.85 else 0
             n_tools = 0 if last_call else rng.choice([1, 1, 1, 2, 2, 3])
             text_tok = int(lognormal(rng, 60, 0.9)) if (n_tools == 0 or rng.random() < 0.5) else 0
@@ -149,7 +158,9 @@ def generate(hours=16.0, laps=99, seed=7, start=None, decode_tok_s=62.0, prefill
             truth["prompt_cached"] += cached
             truth["completion"] += out
             truth["reasoning_tokens"] += think
-            context += computed + out
+            context += computed
+            prev_think = think
+            pending_chars += sum(len(json.dumps(blk)) for blk, _ in blocks if blk["type"] != "thinking")
             t = cursor
             # ---- tool results: each tool starts as soon as its block has streamed (like Claude Code),
             #      so calls in one message overlap each other and the tail of the stream
@@ -168,19 +179,21 @@ def generate(hours=16.0, laps=99, seed=7, start=None, decode_tok_s=62.0, prefill
                       "toolUseResult": {"stdout": "", "stderr": "", "interrupted": False}}, when)
                 truth["tool_sum"] += dur
                 truth["tool_calls"] += 1
-                context += chars // 4
+                pending_chars += chars
             t = end + timedelta(seconds=0.02)
             # ---- compaction when the context is full
-            if context > 165_000:
+            if context + pending_chars / CPT > 165_000:
                 dur = 8 + rng.random() * 12
                 boundary = t + timedelta(seconds=dur)
+                summary = ("This session is being continued from a previous conversation that ran out of context. "
+                           "Summary: porting layers, tests green so far. ") * 40
                 emit({"type": "system", "subtype": "compact_boundary", "content": "Conversation compacted",
-                      "compactMetadata": {"trigger": "auto", "preTokens": context}, "level": "info"}, boundary)
-                emit({"type": "user", "isCompactSummary": True, "message": {"role": "user", "content":
-                      "This session is being continued from a previous conversation that ran out of context. "
-                      "Summary: porting layers, tests green so far."}}, boundary + timedelta(seconds=0.05))
+                      "compactMetadata": {"trigger": "auto", "preTokens": int(context + pending_chars / CPT)}, "level": "info"}, boundary)
+                emit({"type": "user", "isCompactSummary": True, "message": {"role": "user", "content": summary}}, boundary + timedelta(seconds=0.05))
                 truth["compactions"] += 1
-                context = 22_000
+                context = 0   # the prefix is rebuilt: system prompt + tool block + summary get recomputed
+                pending_chars = system_chars + 40_000 * CPT + len(summary)
+                prev_think = 0
                 t = boundary + timedelta(seconds=0.1)
             if last_call:
                 break
