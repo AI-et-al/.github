@@ -4,10 +4,10 @@
 The output uses the same entry shapes Claude Code writes (user prompts, per-block
 assistant entries with usage, tool results, compaction boundaries), so it exercises
 the parser end to end. A sidecar "truth" dict records the phase durations that were
-simulated, which the tests compare against lapboard's estimates.
+simulated, which the tests compare against tokenograph's estimates.
 
     python3 examples/make_sample.py --hours 16 --laps 99 --out /tmp/sample.jsonl
-    python3 lapboard.py build /tmp/sample.jsonl --title "16h synthetic run" -o sample.html
+    python3 -m tokenograph build /tmp/sample.jsonl --title "16h synthetic run" -o sample.html
 """
 from __future__ import annotations
 

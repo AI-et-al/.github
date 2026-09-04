@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!--head-->
-<title>lapboard</title>
+<title>tokenograph</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -63,12 +63,12 @@ footer b{color:var(--dim);font-weight:500}
   <div class="tblwrap"><table id="tbl"></table></div>
   <footer id="foot"></footer>
 </div>
-<script id="lapboard-data" type="application/json">__LAPBOARD_DATA__</script>
+<script id="tokenograph-data" type="application/json">__TOKENOGRAPH_DATA__</script>
 <script>
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
-let D = JSON.parse($('lapboard-data').textContent);
+let D = JSON.parse($('tokenograph-data').textContent);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const pad2 = n => String(n).padStart(2, '0');
 function fmtDur(s) { if (s == null) return '–'; if (s < 60) return Math.round(s) + 's'; if (s < 3600) return `${Math.floor(s / 60)}m${pad2(Math.round(s % 60))}s`; return `${Math.floor(s / 3600)}h${pad2(Math.floor((s % 3600) / 60))}m`; }
@@ -102,7 +102,7 @@ function render() {
       <td>${fmtAgo(r.age_s)}<div class="meta">${new Date(r.last_activity * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div></td></tr>`);
   });
   $('tbl').innerHTML = html.join('');
-  $('foot').innerHTML = `<b>states</b> follow herdr’s vocabulary: working (the agent is producing or running a tool), blocked (a tool call has waited more than 20 s for a result, usually a permission prompt or a question), done (the turn ended and nobody has prompted since), idle (no activity for a while). When herdr is running, its own detection is shown next to the transcript-derived state and drives the ordering. · generated ${new Date(D.generated_at).toLocaleString()} · lapboard ${esc(D.lapboard)}`;
+  $('foot').innerHTML = `<b>states</b> follow herdr’s vocabulary: working (the agent is producing or running a tool), blocked (a tool call has waited more than 20 s for a result, usually a permission prompt or a question), done (the turn ended and nobody has prompted since), idle (no activity for a while). When herdr is running, its own detection is shown next to the transcript-derived state and drives the ordering. · generated ${new Date(D.generated_at).toLocaleString()} · tokenograph ${esc(D.tokenograph)}`;
 }
 function poll() {
   fetch('fleet.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(d => { D = d; render(); }).catch(() => {});

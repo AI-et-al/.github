@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "examples"))
 
-import lapboard  # noqa: E402
+import tokenograph  # noqa: E402
 import make_sample  # noqa: E402
 
 
@@ -49,7 +49,7 @@ class PiSessionTests(unittest.TestCase):
         ]
 
     def test_pi_parse(self):
-        d = lapboard.analyze(self.entries(), source="/home/x/.pi/agent/sessions/w/2025_pi-1.jsonl")
+        d = tokenograph.analyze(self.entries(), source="/home/x/.pi/agent/sessions/w/2025_pi-1.jsonl")
         self.assertEqual(d["meta"]["fmt"], "pi")
         self.assertEqual(d["meta"]["cwd"], "/w/proj")
         self.assertEqual(d["meta"]["models"], ["claude-sonnet-4-5"])
@@ -79,8 +79,8 @@ class PiSessionTests(unittest.TestCase):
         self.assertEqual(d["ledger"]["cum"]["requests"], 2)
 
     def test_format_detection(self):
-        self.assertEqual(lapboard.detect_format(self.entries()), "pi")
-        self.assertEqual(lapboard.detect_format([{"type": "user", "message": {"role": "user", "content": "x"}}]), "claude")
+        self.assertEqual(tokenograph.detect_format(self.entries()), "pi")
+        self.assertEqual(tokenograph.detect_format([{"type": "user", "message": {"role": "user", "content": "x"}}]), "claude")
 
 
 class LedgerTests(unittest.TestCase):
@@ -114,7 +114,7 @@ class LedgerTests(unittest.TestCase):
         return e
 
     def test_ledger_shape_events_and_tools(self):
-        d = lapboard.analyze(self.transcript(), source="mem")
+        d = tokenograph.analyze(self.transcript(), source="mem")
         L = d["ledger"]
         self.assertNotIn("error", L)
         self.assertEqual(L["cum"]["requests"], 4)
@@ -151,9 +151,9 @@ class LedgerTests(unittest.TestCase):
         for x in e:
             if x.get("type") == "assistant":
                 x["message"]["model"] = "mystery-model"
-        d = lapboard.analyze(e, source="mem")
+        d = tokenograph.analyze(e, source="mem")
         self.assertIsNone(d["stats"]["cost"])
-        d = lapboard.analyze(e, source="mem", price=lapboard.parse_price("4,20"))
+        d = tokenograph.analyze(e, source="mem", price=tokenograph.parse_price("4,20"))
         self.assertEqual(d["stats"]["cost"]["pricing"]["source"], "--price")
         self.assertAlmostEqual(d["stats"]["cost"]["output"], 590 * 20 / 1e6, places=9)
 
@@ -164,27 +164,27 @@ class ImageTests(unittest.TestCase):
         w, h = 1440, 900
         raw = b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0) + b"\0\0\0\0"
         data = base64.b64encode(raw).decode()
-        self.assertEqual(lapboard.image_dims("image/png", data), (w, h))
-        self.assertEqual(lapboard.image_tokens("image/png", data), 1534)   # 1.296 MP scaled to the 1.15 MP cap
-        self.assertEqual(lapboard.image_tokens("image/png", data, None, "claude-opus-4-8"), 1728)  # hi-res: no downscale
+        self.assertEqual(tokenograph.image_dims("image/png", data), (w, h))
+        self.assertEqual(tokenograph.image_tokens("image/png", data), 1534)   # 1.296 MP scaled to the 1.15 MP cap
+        self.assertEqual(tokenograph.image_tokens("image/png", data, None, "claude-opus-4-8"), 1728)  # hi-res: no downscale
         big = b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + struct.pack(">IIBBBBB", 4000, 3000, 8, 6, 0, 0, 0) + b"\0\0\0\0"
         bd = base64.b64encode(big).decode()
-        self.assertLess(lapboard.image_tokens("image/png", bd), lapboard.image_tokens("image/png", bd, None, "claude-fable-5-1"))
-        self.assertEqual(lapboard.image_tokens("image/png", "notbase64!!"), 1000)
+        self.assertLess(tokenograph.image_tokens("image/png", bd), tokenograph.image_tokens("image/png", bd, None, "claude-fable-5-1"))
+        self.assertEqual(tokenograph.image_tokens("image/png", "notbase64!!"), 1000)
 
 
 class FleetTests(unittest.TestCase):
     def test_derive_state(self):
         now = 1_000_000.0
         entries, _ = make_sample.generate(hours=0.3, laps=3, seed=2)
-        p = lapboard.analyze(entries, source="mem")
-        self.assertEqual(lapboard.derive_state(p, now - 30, now), "done")
-        self.assertEqual(lapboard.derive_state(p, now - 7200, now), "idle")
+        p = tokenograph.analyze(entries, source="mem")
+        self.assertEqual(tokenograph.derive_state(p, now - 30, now), "done")
+        self.assertEqual(tokenograph.derive_state(p, now - 7200, now), "idle")
         # an unanswered tool call: working while fresh, blocked once it has waited
         p2 = json.loads(json.dumps(p))
         p2["calls"].append({"k": "t", "t0": p2["end"], "t1": p2["end"], "n": "AskUserQuestion", "open": 1, "l": "", "lap": 3, "sub": 0, "err": 0, "ch": 0})
-        self.assertEqual(lapboard.derive_state(p2, now - 5, now), "working")
-        self.assertEqual(lapboard.derive_state(p2, now - 60, now), "blocked")
+        self.assertEqual(tokenograph.derive_state(p2, now - 5, now), "working")
+        self.assertEqual(tokenograph.derive_state(p2, now - 60, now), "blocked")
 
     def test_fleet_payload_with_fake_herdr(self):
         if not hasattr(socket, "AF_UNIX"):
@@ -228,7 +228,7 @@ class FleetTests(unittest.TestCase):
             os.environ["HERDR_SOCKET_PATH"] = str(sock_path)
             os.environ["XDG_CONFIG_HOME"] = str(Path(tmp) / "xdg")
             try:
-                fp = lapboard.fleet_payload(limit=5)
+                fp = tokenograph.fleet_payload(limit=5)
             finally:
                 os.environ.clear()
                 os.environ.update(old)
@@ -240,9 +240,37 @@ class FleetTests(unittest.TestCase):
             self.assertEqual(row["herdr"]["status"], "blocked")
             self.assertEqual(row["herdr"]["pane_id"], "p1")
             self.assertEqual(fp["herdr_servers"], [str(sock_path)])
-            html = lapboard.render_fleet_html(fp)
-            self.assertIn("lapboard-data", html)
+            html = tokenograph.render_fleet_html(fp)
+            self.assertIn("tokenograph-data", html)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GraphTests(unittest.TestCase):
+    def test_graph_export_formats(self):
+        entries, _ = make_sample.generate(hours=0.3, laps=3, seed=4)
+        p = tokenograph.analyze(entries, source="mem")
+        g = tokenograph.build_graph(p)
+        kinds = {}
+        for n in g["nodes"]:
+            kinds[n["kind"]] = kinds.get(n["kind"], 0) + 1
+        self.assertEqual(kinds["lap"], 3)
+        self.assertEqual(kinds["request"], p["stats"]["counts"]["assistant"])
+        self.assertEqual(kinds["tool"], p["stats"]["counts"]["tools"])
+        self.assertIn("category", kinds)
+        ekinds = {e["kind"] for e in g["links"]}
+        self.assertTrue({"has_lap", "contains", "follows", "invokes", "feeds", "present_in"} <= ekinds)
+        ids = {n["id"] for n in g["nodes"]}
+        self.assertTrue(all(e["source"] in ids and e["target"] in ids for e in g["links"]))
+        with tempfile.TemporaryDirectory() as tmp:
+            out = tokenograph.write_graph(g, Path(tmp) / "s.graphml")
+            import xml.etree.ElementTree as ET
+            root = ET.parse(out[0]).getroot()
+            self.assertEqual(root.tag.split("}")[1], "graphml")
+            self.assertEqual(len(root.findall("{http://graphml.graphdrawing.org/xmlns}graph/{http://graphml.graphdrawing.org/xmlns}node")), len(g["nodes"]))
+            outs = tokenograph.write_graph(g, Path(tmp) / "s.csv")
+            self.assertEqual(len(outs), 2)
+            outs = tokenograph.write_graph(g, Path(tmp) / "s.json")
+            self.assertEqual(json.loads(outs[0].read_text())["directed"], True)

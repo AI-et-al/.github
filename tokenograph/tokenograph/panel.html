@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!--head-->
-<title>lapboard</title>
+<title>tokenograph</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -133,7 +133,7 @@ footer b{color:var(--dim);font-weight:500}
       <rect x="4" y="1" width="1" height="3" fill="#fff"/><rect x="1" y="3" width="3" height="1" fill="#fff"/>
       <rect x="6" y="6" width="2" height="2" fill="#fff"/>
     </svg>
-    <h1 id="title">lapboard</h1>
+    <h1 id="title">tokenograph</h1>
     <div class="sub" id="subtitle"></div>
   </header>
 
@@ -186,7 +186,7 @@ footer b{color:var(--dim);font-weight:500}
   <footer id="foot"></footer>
 </div>
 <div id="tip" class="tip" hidden></div>
-<script id="lapboard-data" type="application/json">__LAPBOARD_DATA__</script>
+<script id="tokenograph-data" type="application/json">__TOKENOGRAPH_DATA__</script>
 <script>
 (() => {
 'use strict';
@@ -197,7 +197,7 @@ const C = {
   track:'#18181d', lapA:'#2a2a31', lapB:'#3a3a43', text:'#d9d9de', dim:'#8f8f98', faint:'#5a5a64'
 };
 const PITCH = 30, BAR = 14, AXIS_H = 34, MIN_W = 1.2;
-let D = JSON.parse($('lapboard-data').textContent);
+let D = JSON.parse($('tokenograph-data').textContent);
 let rows = [], view = null, hover = null, dragging = null;
 const cv = $('cv'), ctx = cv.getContext('2d'), cwrap = $('cwrap'), tip = $('tip');
 
@@ -231,8 +231,8 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 /* ---------- header + stats ---------- */
 function renderHeader() {
   const m = D.meta;
-  $('title').textContent = m.title || 'lapboard';
-  document.title = (m.title ? m.title.slice(0, 60) + ' · ' : '') + 'lapboard';
+  $('title').textContent = m.title || 'tokenograph';
+  document.title = (m.title ? m.title.slice(0, 60) + ' · ' : '') + 'tokenograph';
   const bits = [];
   if (m.agent) bits.push(`<b>${esc(m.agent)}</b>`);
   if (m.session_id) bits.push(`session <b>${esc(m.session_id.slice(0, 8))}</b>`);
@@ -528,7 +528,7 @@ function renderFooter() {
   const parts = [`<b>measured</b> from transcript timestamps and API usage counts`,
     e.phase_method === 'blocks' ? `<b>estimated</b> prefill/decode split, from the visible-text decode speed observed after thinking blocks (${Math.round(e.decode_tok_s)} tok/s)` : e.phase_method === 'regression' ? `<b>estimated</b> prefill/decode split by a latency fit over the session’s requests (decode ~${Math.round(e.decode_tok_s || 0)} tok/s)` : `<b>not separable</b>: prefill (no per-block timing in this transcript)`,
     `reasoning tokens ${e.reasoning_tokens}`, `tool-result tokens at ~4 chars/token`,
-    `generated ${when.toLocaleString()} · lapboard ${D.meta.lapboard}${D.meta.source ? ' · ' + esc(D.meta.source) : ''}`];
+    `generated ${when.toLocaleString()} · tokenograph ${D.meta.tokenograph}${D.meta.source ? ' · ' + esc(D.meta.source) : ''}`];
   $('foot').innerHTML = parts.join(' · ');
 }
 
@@ -691,7 +691,7 @@ function poll() {
 renderAll(false);
 wire(); wireCtx();
 if (D.meta.live) setInterval(poll, Math.max(1000, D.meta.poll_ms || 2500));
-window.__lapboard = { get data() { return D; }, get rows() { return rows; }, get view() { return view; }, setView, draw };
+window.__tokenograph = { get data() { return D; }, get rows() { return rows; }, get view() { return view; }, setView, draw };
 })();
 </script>
 <!--/body-->

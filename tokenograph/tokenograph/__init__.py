@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""lapboard: telemetry and token accounting for long-horizon coding-agent sessions.
+"""tokenograph: tokenometrics for long-horizon coding-agent sessions.
+
+Telemetry, a context ledger and cost accounting for Claude Code and pi sessions.
 
 Reads Claude Code transcripts (~/.claude/projects/<project>/<session>.jsonl) and
 pi sessions (~/.pi/agent/sessions/<cwd>/<stamp>_<id>.jsonl) and renders one page:
@@ -16,11 +18,12 @@ pi sessions (~/.pi/agent/sessions/<cwd>/<stamp>_<id>.jsonl) and renders one page
 
 Only the Python standard library is required (3.8+).
 
-    python3 lapboard.py list
-    python3 lapboard.py build latest -o panel.html
-    python3 lapboard.py serve latest --open
-    python3 lapboard.py fleet --serve            # every session, herdr-style states
-    python3 lapboard.py json  <session-id-or-path>
+    python3 -m tokenograph list
+    python3 -m tokenograph build latest -o panel.html
+    python3 -m tokenograph serve latest --open
+    python3 -m tokenograph fleet --serve            # every session, herdr-style states
+    python3 -m tokenograph graph latest -o s.graphml # the session as a property graph
+    python3 -m tokenograph json  <session-id-or-path>
 
 Measured vs. estimated: timestamps and usage counts are measured. The prefill/
 decode split, token counts derived from characters, image tokens, and dollar cost
@@ -47,11 +50,11 @@ import webbrowser
 from collections import defaultdict
 from pathlib import Path
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 HERE = Path(__file__).resolve().parent
 TEMPLATE_PATH = HERE / "panel.html"
 FLEET_TEMPLATE_PATH = HERE / "fleet.html"
-DATA_MARKER = "__LAPBOARD_DATA__"
+DATA_MARKER = "__TOKENOGRAPH_DATA__"
 DEFAULT_WINDOW = 200_000
 LARGE_WINDOW = 1_000_000
 INTERRUPT_PREFIX = "[Request interrupted by user"
@@ -376,7 +379,7 @@ def resolve_session(arg: str) -> Path:
     if len(matches) == 1:
         return matches[0]["path"]
     if not matches:
-        raise SystemExit(f"no session matching {arg!r} (try: lapboard.py list)")
+        raise SystemExit(f"no session matching {arg!r} (try: tokenograph list)")
     raise SystemExit("ambiguous session id, matches:\n  " + "\n  ".join(str(m["path"]) for m in matches))
 
 
@@ -1561,7 +1564,7 @@ def analyze(main_entries, sub_streams=(), *, title=None, context_window=None, li
             "reasoning_tokens": ("reported" if think_rep and all(think_rep) else
                                  "estimated" if not any(think_rep) else "mixed"),
         },
-        "lapboard": __version__,
+        "tokenograph": __version__,
     }
     return {"meta": meta, "base": base, "end": rel(t_end), "stats": stats, "calls": calls,
             "laps": [{**lp, "t0": rel(lp["t0"]), "t1": rel(lp["t1"])} for lp in laps],
@@ -1629,7 +1632,7 @@ def herdr_request(sock_path, method, params=None, timeout=1.5):
     s.settimeout(timeout)
     try:
         s.connect(str(sock_path))
-        s.sendall((json.dumps({"id": "lapboard-1", "method": method, "params": params or {}}) + "\n").encode())
+        s.sendall((json.dumps({"id": "tokenograph-1", "method": method, "params": params or {}}) + "\n").encode())
         buf = b""
         while b"\n" not in buf:
             chunk = s.recv(65536)
@@ -1710,7 +1713,7 @@ def fleet_payload(limit=30, price=None, context_window=None, now=None, cache=Non
         })
     rows.sort(key=lambda r: (STATE_ORDER.get(r["herdr"]["status"] if r["herdr"] else r["state"], 9), -r["last_activity"]))
     return {"generated_at": dt.datetime.fromtimestamp(now, dt.timezone.utc).isoformat(timespec="seconds"),
-            "now": now, "rows": rows, "herdr_servers": herdr["servers"], "lapboard": __version__,
+            "now": now, "rows": rows, "herdr_servers": herdr["servers"], "tokenograph": __version__,
             "sources": {"claude": str(projects_dir()), "pi": str(pi_sessions_dir())}}
 
 
@@ -1721,9 +1724,9 @@ def _inline(template_path, payload, fragment=False, title=None):
         raise SystemExit(f"template not found: {template_path}")
     tpl = template_path.read_text(encoding="utf-8")
     data = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
-    title = title or "lapboard"
+    title = title or "tokenograph"
     safe = title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    page = tpl.replace(DATA_MARKER, data).replace("<title>lapboard</title>", f"<title>{safe}</title>", 1)
+    page = tpl.replace(DATA_MARKER, data).replace("<title>tokenograph</title>", f"<title>{safe}</title>", 1)
     if not fragment:
         return page
     head = re.search(r"<!--head-->(.*?)<!--/head-->", page, re.S)
@@ -1736,7 +1739,7 @@ def render_html(payload, fragment=False):
 
 
 def render_fleet_html(payload, fragment=False):
-    return _inline(FLEET_TEMPLATE_PATH, payload, fragment, "lapboard fleet")
+    return _inline(FLEET_TEMPLATE_PATH, payload, fragment, "tokenograph fleet")
 
 
 def load_streams(session_path: Path, include_subagents: bool):
@@ -1869,7 +1872,7 @@ def cmd_serve(args):
             return json.dumps(state.snapshot(), separators=(",", ":")), "application/json"
         return None
 
-    _serve(handle, args.host, args.port, f"lapboard: {path}", args.open)
+    _serve(handle, args.host, args.port, f"tokenograph: {path}", args.open)
     return 0
 
 
@@ -1925,13 +1928,182 @@ def cmd_fleet(args):
             return render_html(st.snapshot()), "text/html; charset=utf-8"
         return None
 
-    _serve(handle, args.host, args.port, "lapboard fleet", args.open)
+    _serve(handle, args.host, args.port, "tokenograph fleet", args.open)
+    return 0
+
+
+
+# --------------------------------------------------------------------------- graph export
+
+def build_graph(payload):
+    """The session as a property graph (node-link form).
+
+    Nodes: session, laps, requests, tool calls, compactions, cache rebuilds, context
+    categories. Edges carry a kind and a weight in tokens or seconds:
+      session -has_lap-> lap -next-> lap
+      lap -contains-> request -follows-> request         (weight: tokens reused from cache)
+      request -invokes-> tool -feeds-> request           (the result enters the next request)
+      request -compacted_into-> compaction -resumes-> request
+      category -present_in-> request                     (weight: tokens in that request's window)
+      rebuild -hits-> request                            (weight: tokens recomputed)
+    Loads with networkx.node_link_graph(data, edges="links"), Gephi (GraphML) or Neo4j (CSV).
+    """
+    meta, calls, laps = payload["meta"], payload["calls"], payload["laps"]
+    base = payload["base"]
+    nodes, links = [], []
+
+    def node(nid, kind, **attrs):
+        nodes.append({"id": nid, "kind": kind, **attrs})
+        return nid
+
+    def link(a, b, kind, **attrs):
+        links.append({"source": a, "target": b, "kind": kind, **attrs})
+
+    sid = node("session", "session", title=meta.get("title"), agent=meta.get("agent"),
+               session_id=meta.get("session_id"), cwd=meta.get("cwd"), wall_s=payload["stats"]["time"]["wall"])
+    lap_ids = []
+    for lp in laps:
+        lid = node(f"lap:{lp['n']}", "lap", n=lp["n"], t0=lp["t0"], t1=lp["t1"], prompt=lp["l"], calls=lp["calls"])
+        link(sid, lid, "has_lap")
+        if lap_ids:
+            link(lap_ids[-1], lid, "next", weight=lp["t0"] - laps[lp["n"] - 2]["t0"])
+        lap_ids.append(lid)
+
+    models = sorted([c for c in calls if c["k"] == "m" and not c.get("sub")], key=lambda c: c["t0"])
+    req_ids = []
+    for k, c in enumerate(models):
+        rid = node(f"request:{k + 1}", "request", n=k + 1, t0=c["t0"], t1=c["t1"], latency_s=round(c["t1"] - c["t0"], 3),
+                   prefill_s=round(c["p"][0] - c["t0"], 3), reasoning_s=round(c["p"][1] - c["p"][0], 3),
+                   generation_s=round(c["t1"] - c["p"][1], 3), computed=c["tok"][0], cached=c["tok"][1],
+                   output=c["tok"][2], thinking=c["tok"][3], stop=c.get("stop"), model=c.get("m"))
+        if c.get("lap"):
+            link(f"lap:{c['lap']}", rid, "contains")
+        if req_ids:
+            link(req_ids[-1], rid, "follows", weight=c["tok"][1])
+        req_ids.append(rid)
+
+    def request_at(t):
+        best = None
+        for k, c in enumerate(models):
+            if c["t0"] <= t:
+                best = k
+            else:
+                break
+        return best
+
+    tools = sorted([c for c in calls if c["k"] == "t" and not c.get("sub")], key=lambda c: c["t0"])
+    for i, t in enumerate(tools):
+        tid = node(f"tool:{i + 1}", "tool", name=t["n"], t0=t["t0"], t1=t["t1"], duration_s=round(t["t1"] - t["t0"], 3),
+                   error=bool(t.get("err")), label=t.get("l"), result_chars=t.get("ch", 0))
+        k = request_at(t["t0"])
+        if k is not None:
+            link(req_ids[k], tid, "invokes")
+            if k + 1 < len(req_ids):
+                link(tid, req_ids[k + 1], "feeds", weight=round((t.get("ch") or 0) / 4))
+    comps = sorted([c for c in calls if c["k"] == "c"], key=lambda c: c["t0"])
+    for i, c in enumerate(comps):
+        cid = node(f"compaction:{i + 1}", "compaction", t0=c["t0"], t1=c["t1"], label=c.get("l"))
+        k = request_at(c["t0"])
+        if k is not None:
+            link(req_ids[k], cid, "compacted_into")
+            if k + 1 < len(req_ids):
+                link(cid, req_ids[k + 1], "resumes")
+
+    ledger = payload.get("ledger") or {}
+    if ledger and not ledger.get("error"):
+        cats = set()
+        for k, s in enumerate(ledger.get("series", [])):
+            if k >= len(req_ids):
+                break
+            for cat, tokens in s["g"].items():
+                if cat not in cats:
+                    node(f"category:{cat}", "category", label=GROUP_LABELS.get(cat, cat))
+                    cats.add(cat)
+                link(f"category:{cat}", req_ids[k], "present_in", weight=tokens)
+        for i, e in enumerate(ledger.get("events", [])):
+            eid = node(f"rebuild:{i + 1}", "cache_rebuild", t=e["t"], recomputed=e["recomputed"], cause=e["cause"],
+                       extra_cost=e.get("extra_cost"))
+            if e["k"] < len(req_ids):
+                link(eid, req_ids[e["k"]], "hits", weight=e["recomputed"])
+    return {"directed": True, "multigraph": False, "graph": {"session": meta.get("session_id"), "base": base,
+            "tokenograph": __version__}, "nodes": nodes, "links": links}
+
+
+def write_graph(graph, path):
+    """node-link JSON, GraphML, or a CSV pair (<stem>.nodes.csv / <stem>.edges.csv) by extension."""
+    path = Path(path)
+    ext = path.suffix.lower()
+    if ext == ".graphml":
+        import xml.etree.ElementTree as ET
+        NS = "http://graphml.graphdrawing.org/xmlns"
+        root = ET.Element("graphml", xmlns=NS)
+        keys = {}
+
+        def key_for(scope, name, value):
+            kid = f"{scope[0]}_{name}"
+            if kid not in keys:
+                typ = "boolean" if isinstance(value, bool) else "long" if isinstance(value, int) else \
+                    "double" if isinstance(value, float) else "string"
+                el = ET.SubElement(root, "key", id=kid)
+                el.set("for", scope)
+                el.set("attr.name", name)
+                el.set("attr.type", typ)
+                keys[kid] = typ
+            return kid
+
+        g = ET.SubElement(root, "graph", id="session", edgedefault="directed")
+        for n in graph["nodes"]:
+            el = ET.SubElement(g, "node", id=n["id"])
+            for a, v in n.items():
+                if a == "id" or v is None:
+                    continue
+                d = ET.SubElement(el, "data", key=key_for("node", a, v))
+                d.text = str(v).lower() if isinstance(v, bool) else str(v)
+        for i, e in enumerate(graph["links"]):
+            el = ET.SubElement(g, "edge", id=f"e{i}", source=e["source"], target=e["target"])
+            for a, v in e.items():
+                if a in ("source", "target") or v is None:
+                    continue
+                d = ET.SubElement(el, "data", key=key_for("edge", a, v))
+                d.text = str(v)
+        # keys must precede the graph element
+        root[:] = [c for c in root if c.tag == "key"] + [g]
+        ET.ElementTree(root).write(str(path), encoding="utf-8", xml_declaration=True)
+        return [path]
+    if ext == ".csv":
+        import csv
+        stem = path.with_suffix("")
+        npath, epath = Path(f"{stem}.nodes.csv"), Path(f"{stem}.edges.csv")
+        ncols = sorted({a for n in graph["nodes"] for a in n}, key=lambda a: (a != "id", a != "kind", a))
+        with open(npath, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=ncols)
+            w.writeheader()
+            for n in graph["nodes"]:
+                w.writerow(n)
+        ecols = sorted({a for e in graph["links"] for a in e}, key=lambda a: (a != "source", a != "target", a != "kind", a))
+        with open(epath, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=ecols)
+            w.writeheader()
+            for e in graph["links"]:
+                w.writerow(e)
+        return [npath, epath]
+    path.write_text(json.dumps(graph, indent=1, ensure_ascii=False), encoding="utf-8")
+    return [path]
+
+
+def cmd_graph(args):
+    path = resolve_session(args.session)
+    reader, subs = load_streams(path, not args.no_subagents)
+    payload = build_payload(reader, subs, args)
+    graph = build_graph(payload)
+    written = write_graph(graph, args.output)
+    print(f"wrote {', '.join(str(p) for p in written)}: {len(graph['nodes'])} nodes, {len(graph['links'])} edges")
     return 0
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="lapboard", description="telemetry and token accounting for coding-agent sessions")
-    ap.add_argument("--version", action="version", version=f"lapboard {__version__}")
+    ap = argparse.ArgumentParser(prog="tokenograph", description="telemetry and token accounting for coding-agent sessions")
+    ap.add_argument("--version", action="version", version=f"tokenograph {__version__}")
     sub = ap.add_subparsers(dest="cmd")
     sub.required = True
 
@@ -1949,7 +2121,7 @@ def main(argv=None):
     p.set_defaults(fn=cmd_list)
 
     p = sub.add_parser("build", parents=[common], help="write a self-contained HTML panel")
-    p.add_argument("-o", "--output", default="lapboard.html")
+    p.add_argument("-o", "--output", default="tokenograph.html")
     p.add_argument("--fragment", action="store_true", help=argparse.SUPPRESS)
     p.set_defaults(fn=cmd_build, interval=2.5)
 
@@ -1964,6 +2136,10 @@ def main(argv=None):
     p.add_argument("-o", "--output")
     p.add_argument("--pretty", action="store_true")
     p.set_defaults(fn=cmd_json, interval=2.5)
+
+    p = sub.add_parser("graph", parents=[common], help="export the session as a property graph")
+    p.add_argument("-o", "--output", default="session.json", help=".json (node-link), .graphml, or .csv (nodes + edges)")
+    p.set_defaults(fn=cmd_graph, interval=2.5)
 
     p = sub.add_parser("fleet", help="every session with herdr-style states, tokens and cost")
     p.add_argument("--serve", action="store_true", help="live page instead of a static file")

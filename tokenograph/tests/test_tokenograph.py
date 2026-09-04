@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "examples"))
 
-import lapboard  # noqa: E402
+import tokenograph  # noqa: E402
 import make_sample  # noqa: E402
 
 
@@ -20,18 +20,18 @@ def entry(kind, ts, **kw):
 
 class TimestampTests(unittest.TestCase):
     def test_variants(self):
-        z = lapboard.parse_ts("2026-09-04T16:21:27.694Z")
+        z = tokenograph.parse_ts("2026-09-04T16:21:27.694Z")
         self.assertAlmostEqual(z % 1, 0.694, places=3)
-        self.assertEqual(lapboard.parse_ts("2026-09-04T16:21:27Z"), lapboard.parse_ts("2026-09-04T18:21:27+02:00"))
-        self.assertIsNone(lapboard.parse_ts(None))
-        self.assertIsNone(lapboard.parse_ts("yesterday"))
+        self.assertEqual(tokenograph.parse_ts("2026-09-04T16:21:27Z"), tokenograph.parse_ts("2026-09-04T18:21:27+02:00"))
+        self.assertIsNone(tokenograph.parse_ts(None))
+        self.assertIsNone(tokenograph.parse_ts("yesterday"))
 
 
 class SyntheticSessionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.entries, cls.truth = make_sample.generate(hours=3.0, laps=20, seed=3)
-        cls.d = lapboard.analyze(cls.entries, title="t", source="mem")
+        cls.d = tokenograph.analyze(cls.entries, title="t", source="mem")
 
     def test_counts(self):
         s, tr = self.d["stats"], self.truth
@@ -101,7 +101,7 @@ class HandBuiltTests(unittest.TestCase):
         ]
 
     def test_request_window_and_tools(self):
-        d = lapboard.analyze(self.transcript(), source="mem")
+        d = tokenograph.analyze(self.transcript(), source="mem")
         models = [c for c in d["calls"] if c["k"] == "m"]
         self.assertEqual(len(models), 1)
         m = models[0]
@@ -115,7 +115,7 @@ class HandBuiltTests(unittest.TestCase):
         self.assertEqual(d["stats"]["counts"]["tool_errors"], 1)
 
     def test_laps_interrupts_compaction_meta(self):
-        d = lapboard.analyze(self.transcript(), source="mem")
+        d = tokenograph.analyze(self.transcript(), source="mem")
         self.assertEqual(d["stats"]["laps"], 2)
         self.assertEqual(d["stats"]["counts"]["interrupts"], 1)
         self.assertEqual(d["stats"]["counts"]["compactions"], 1)
@@ -131,7 +131,7 @@ class HandBuiltTests(unittest.TestCase):
 
     def test_no_decode_observation_falls_back(self):
         # a single request with only a thinking block: decode speed cannot be observed
-        d = lapboard.analyze(self.transcript()[:5] + [entry("user", "2026-01-01T00:00:20.000Z", message={"role": "user", "content": "x"})], source="mem")
+        d = tokenograph.analyze(self.transcript()[:5] + [entry("user", "2026-01-01T00:00:20.000Z", message={"role": "user", "content": "x"})], source="mem")
         self.assertIsNone(d["meta"]["estimates"]["decode_tok_s"])
         self.assertEqual(d["stats"]["time"]["prefill"], 0.0)
         self.assertGreater(d["stats"]["time"]["reasoning"], 0.0)
@@ -145,16 +145,16 @@ class RenderTests(unittest.TestCase):
             if e["type"] == "assistant" and isinstance(blocks, list) and blocks[0]["type"] == "tool_use":
                 blocks[0]["input"] = {"command": "echo '</script> inside'"}
                 break
-        d = lapboard.analyze(entries, source="mem")
-        page = lapboard.render_html(d)
+        d = tokenograph.analyze(entries, source="mem")
+        page = tokenograph.render_html(d)
         self.assertIn("<!doctype html>", page.lower())
         self.assertNotIn("</script> inside", page)
         self.assertIn("<\\/script> inside", page)
-        frag = lapboard.render_html(d, fragment=True)
+        frag = tokenograph.render_html(d, fragment=True)
         self.assertNotIn("<html", frag)
         self.assertNotIn("<body", frag)
         self.assertTrue(frag.lstrip().startswith("<title>"))
-        self.assertIn('id="lapboard-data"', frag)
+        self.assertIn('id="tokenograph-data"', frag)
 
 
 if __name__ == "__main__":

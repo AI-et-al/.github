@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tokenograph"
+version = "0.3.0"
+description = "Tokenometrics for coding-agent sessions: telemetry, context ledger and cost accounting for Claude Code and pi"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["claude-code", "pi", "agents", "tokens", "telemetry", "prompt-caching", "herdr", "tokenometrics"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Environment :: Console",
+  "Topic :: Software Development",
+]
+
+[project.urls]
+Homepage = "https://github.com/AI-et-al/tokenograph"
+
+[project.scripts]
+tokenograph = "tokenograph:main"
+
+[tool.setuptools]
+packages = ["tokenograph"]
+
+[tool.setuptools.package-data]
+tokenograph = ["*.html"]

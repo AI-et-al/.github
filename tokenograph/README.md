@@ -1,22 +1,24 @@
-# lapboard
+# tokenograph
 
-Telemetry and token accounting for long-horizon coding-agent sessions. Point it at a
-Claude Code transcript or a pi session and it renders one page: throughput, an additive
-wall-clock split, token and cost accounting, a per-row timeline of every call, and a
-ledger of what is in the context window and what each part has cost.
+Tokenometrics for coding-agent sessions. Point it at a Claude Code transcript or a pi
+session and it renders one page: throughput, an additive wall-clock split, token and cost
+accounting, a per-row timeline of every call, and a ledger of what is in the context
+window, what each part has cost, and why the cache was rebuilt. It also exports the
+session as a property graph and watches a whole fleet of sessions with herdr's states.
 
-![lapboard on a synthetic 16-hour run](examples/sample-panel.png)
+![tokenograph on a synthetic 16-hour run](examples/sample-panel.png)
 
 It started as a clean-room equivalent of the run-stats panel Han Xiao posted for a
 16-hour autonomous coding run ([the post](https://x.com/hxiao/status/2095609195030864347)).
 Python standard library only, no build step.
 
 ```
-python3 lapboard.py list                          # Claude Code and pi sessions, newest first
-python3 lapboard.py build latest -o panel.html    # self-contained HTML, open it anywhere
-python3 lapboard.py serve latest --open           # live panel that follows a running session
-python3 lapboard.py fleet --serve --open          # every session, herdr-style states, live
-python3 lapboard.py json  <session-id-or-path>    # the computed numbers, for other frontends
+python3 -m tokenograph list                          # Claude Code and pi sessions, newest first
+python3 -m tokenograph build latest -o panel.html    # self-contained HTML, open it anywhere
+python3 -m tokenograph serve latest --open           # live panel that follows a running session
+python3 -m tokenograph fleet --serve --open          # every session, herdr-style states, live
+python3 -m tokenograph graph latest -o s.graphml     # the session as a property graph
+python3 -m tokenograph json  <session-id-or-path>    # the computed numbers, for other frontends
 ```
 
 `latest`, a session id prefix, a directory, or a path to a `.jsonl` all work. The format
@@ -25,14 +27,14 @@ next to a Claude Code session are merged in (`--no-subagents` to skip).
 
 ## Sources
 
-| agent | where lapboard looks | what the file records |
+| agent | where tokenograph looks | what the file records |
 |---|---|---|
 | Claude Code | `~/.claude/projects/<project>/<session>.jsonl` (`CLAUDE_CONFIG_DIR` respected) | one entry per streamed content block with a timestamp, exact usage per request, tool results, injected reminders, the system prompt (`prompt_snapshot`), compaction markers |
 | pi ([pi-mono](https://github.com/badlogic/pi-mono)) | `~/.pi/agent/sessions/<cwd>/<stamp>_<id>.jsonl` (`PI_CODING_AGENT_DIR` respected) | one entry per message with start and end timestamps, usage including pi's own cost figure, tool results, compactions, model changes |
 
 pi records no per-block timing and no system prompt, so for pi sessions the prefill/decode
 split comes from a latency fit and the system prompt shows up under "tool schemas &
-unmeasured". pi's recorded cost is shown next to lapboard's estimate; on pi's own test
+unmeasured". pi's recorded cost is shown next to tokenograph's estimate; on pi's own test
 fixtures the two agree to the cent.
 
 ## The panel
@@ -96,7 +98,7 @@ API's measured input total drawn over it, and three tables:
   JSON, code) and one for prose, both calibrated on this session: on requests served from
   a warm cache, the API's computed tokens are exactly the new content since the previous
   request. When a system-prompt change rebuilds the cache, what stays cached is the prefix
-  before the system prompt, i.e. the built-in tool block; lapboard uses that as the floor
+  before the system prompt, i.e. the built-in tool block; tokenograph uses that as the floor
   of "tool schemas & unmeasured" and scales estimates that exceed the measured window.
   Each request's input bill is then split across the categories by the tokens they
   contributed, new content first.
@@ -137,7 +139,7 @@ shows which tools were loaded solo, at which request, and how many requests re-s
 
 ## Fleet and herdr
 
-`lapboard fleet` lists every Claude Code and pi session on the machine with a state in
+`tokenograph fleet` lists every Claude Code and pi session on the machine with a state in
 [herdr](https://github.com/ogulcancelik/herdr)'s vocabulary, derived from the transcript
 tail: **working** (producing or running a tool), **blocked** (a tool call has waited more
 than 20 s for its result, usually a permission prompt or a question), **done** (the turn
@@ -145,17 +147,40 @@ ended and nobody has prompted since), **idle**. Each row shows laps, wall clock,
 fill, computed and cached tokens, output, estimated cost and last activity; in `--serve`
 mode the rows link to live per-session panels.
 
-When herdr is running, lapboard also asks it. herdr exposes a newline-delimited JSON
+When herdr is running, tokenograph also asks it. herdr exposes a newline-delimited JSON
 socket at `$XDG_CONFIG_HOME/herdr/herdr.sock` (or `~/.config/herdr/herdr.sock`, or the
 `HERDR_SOCKET_PATH` a pane inherits); `agent.list` returns every pane's agent, its
 detected status and the agent's own session id, which herdr's Claude Code and pi
-integrations report to it at session start. lapboard joins on that id (falling back to a
+integrations report to it at session start. tokenograph joins on that id (falling back to a
 unique working directory) and shows herdr's status next to its own, with herdr's driving
 the ordering. Nothing is written to herdr.
 
+## Graph export
+
+A session is already a graph: prompts open laps, laps contain requests, each request
+reuses the previous one's cached prefix, tool calls are invoked by one request and feed
+the next, compactions fold a run of requests into a summary, and every context category
+is present in every request with a token weight. `tokenograph graph` writes that graph
+as node-link JSON (`networkx.node_link_graph(data, edges="links")`), GraphML (Gephi,
+yEd, igraph) or a CSV pair for Neo4j's importer.
+
+```
+session -has_lap-> lap -next-> lap
+lap -contains-> request -follows-> request        weight: tokens served from cache
+request -invokes-> tool -feeds-> request          weight: result tokens entering the next request
+request -compacted_into-> compaction -resumes-> request
+category -present_in-> request                    weight: tokens of that category in the window
+rebuild -hits-> request                           weight: tokens recomputed, with the cause
+```
+
+Questions that are one query away once it is a graph: which tool results are still being
+paid for twenty requests later (follow `feeds` then `follows`); which lap's prompt led to
+the most expensive subgraph; what the shortest path from a system-prompt change to a
+rebuild looks like; which categories dominate the window after each compaction.
+
 ## Data model
 
-`lapboard.py json` emits what the page renders:
+`tokenograph json` emits what the page renders:
 
 ```
 meta    title, agent (claude-code | pi), session id, models, cwd, branch, estimates used
@@ -172,13 +197,14 @@ ledger  cpt, cpt_prose, tool_block_hint, series[{t,m,in,cc,cr,g{category:tokens}
         now{rows[...]}, cum{rows[...],computed,cached,requests}, events[...], tools{...}
 ```
 
-`lapboard.py fleet` (static) or `/fleet.json` (served) emits one row per session with the
+`tokenograph fleet` (static) or `/fleet.json` (served) emits one row per session with the
 same stats plus `state`, `herdr` (status, pane, workspace, name) and `age_s`.
+`tokenograph graph` emits `{directed, nodes:[{id, kind, ...}], links:[{source, target, kind, weight}]}`.
 
 ## Files
 
 ```
-lapboard.py              adapters (Claude Code, pi), metrics, ledger, fleet, CLI
+tokenograph.py              adapters (Claude Code, pi), metrics, ledger, fleet, CLI
 panel.html               the session page; build inlines the data into it
 fleet.html               the fleet page
 examples/make_sample.py  synthetic 16h transcript generator with ground-truth timings
@@ -190,7 +216,7 @@ To reproduce the screenshot without a real session:
 
 ```
 python3 examples/make_sample.py --hours 16 --laps 99 --out /tmp/sample.jsonl
-python3 lapboard.py build /tmp/sample.jsonl --title "16h long-horizon task on model porting" -o sample.html
+python3 -m tokenograph build /tmp/sample.jsonl --title "16h long-horizon task on model porting" -o sample.html
 ```
 
 ## Limitations
