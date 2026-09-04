@@ -1064,6 +1064,9 @@ def build_ledger(ctx, models, price, window, base):
     prev = None
     prev_snap = None
     last_detail = None
+    HISTORY_K = 20   # content that entered the window more than this many requests ago
+    hist_tokens = hist_cost = 0.0
+    hist_now = 0.0
     for k, c in enumerate(main):
         snap = None
         for s in snaps:
@@ -1171,8 +1174,15 @@ def build_ledger(ctx, models, price, window, base):
                 events.append({"t": round(c["t0"] - base, 3), "recomputed": int(recomputed),
                                "expected": int(prev_meas), "cause": cause,
                                "extra_cost": extra, "k": k})
+        # re-sent history: conversation content older than HISTORY_K requests, still in the window
+        cutoff = main[k - HISTORY_K]["idx"] if k >= HISTORY_K else -1
+        old_tok = sum(tok(it) * f for it in present if it["i"] < cutoff and it["g"] not in ("compaction",))
+        hist_now = old_tok
+        hist_tokens += old_tok
+        hist_cost += old_tok * (cache_rate if cache_rate else comp_rate)
         series.append({"t": round(c["t0"] - base, 3), "m": int(meas), "in": c["_in"], "cc": c["_cc"],
-                       "cr": c["_cr"], "g": {key: int(round(v)) for key, v in comp.items() if v >= 1}})
+                       "cr": c["_cr"], "old": int(round(old_tok)),
+                       "g": {key: int(round(v)) for key, v in comp.items() if v >= 1}})
         last_detail = (c, comp, detail, present, snap, meas)
         prev, prev_snap = c, (snap or prev_snap)
 
@@ -1218,6 +1228,8 @@ def build_ledger(ctx, models, price, window, base):
     return {
         "cpt": round(cpt_tool, 2), "cpt_prose": round(cpt_prose, 2), "calibrated": calibrated, "window": window,
         "tool_block_hint": int(hint), "reconciled": reconciled,
+        "history": {"k": HISTORY_K, "now": int(round(hist_now)), "now_share": (hist_now / meas) if meas else None,
+                    "resent_tokens": int(round(hist_tokens)), "cost": hist_cost if price else None},
         "read_mult": read_mult, "series": series, "events": events,
         "now": {"k": len(main) - 1, "measured": int(meas), "estimated": int(round(sum(comp.values()) - comp["residual"])),
                 "rows": now_rows},

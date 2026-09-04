@@ -177,6 +177,7 @@ footer b{color:var(--dim);font-weight:500}
         <div><h3>in the window <span id="ctx-now-title"></span></h3><table class="ledger" id="ctx-now"></table></div>
         <div><h3>what each category cost <span id="ctx-cum-title"></span></h3><table class="ledger" id="ctx-cum"></table></div>
       </div>
+      <div class="ctx-block" id="ctx-history"></div>
       <div class="ctx-block" id="ctx-events"></div>
       <div class="ctx-block" id="ctx-tools"></div>
       <div class="ctx-notes" id="ctx-notes"></div>
@@ -609,6 +610,12 @@ function renderCum() {
   });
   $('ctx-cum').innerHTML = html.join('');
 }
+function renderHistory() {
+  const L = D.ledger, H = L.history, el = $('ctx-history');
+  if (!H) { el.innerHTML = ''; return; }
+  const share = H.now_share == null ? '–' : Math.round(H.now_share * 100) + '%';
+  el.innerHTML = `<h3>re-sent history</h3><div class="verdict">${share} of the current window (${fmtTok(H.now)} tokens) is conversation content that entered more than ${H.k} requests ago and is still being sent with every request. Over the session that content was re-sent ${fmtTok(H.resent_tokens)} token-times${H.cost != null ? ', about $' + H.cost.toFixed(2) + ' at cache-read prices' : ''}. A harness that distilled history into verified state deltas instead of replaying it would not pay this; whether the agent still needs it is not observable from the transcript.</div>`;
+}
 function renderEvents() {
   const L = D.ledger, el = $('ctx-events');
   if (!L.events.length) { el.innerHTML = '<h3>cache rebuilds</h3><div class="verdict" style="color:var(--dim)">none: every request after the first reused the cached prefix.</div>'; return; }
@@ -647,7 +654,7 @@ function renderContext() {
   $('ctx-meta').innerHTML = `${fmtTok(last.m)} in window · <span title="share of the measured window the ledger attributes to something">${last.m ? Math.round(acc / last.m * 100) : 0}% attributed</span>`;
   $('ctx-sum').innerHTML = `<b>${L.series.length} requests</b> · peak ${fmtTok(Math.max(...L.series.map(s => s.m)))} · ${L.events.length} cache rebuild${L.events.length === 1 ? '' : 's'} · click a bar to inspect`;
   if (ctxSel != null && ctxSel >= L.series.length) ctxSel = null;
-  drawCtx(); renderNow(ctxSel); renderCum(); renderEvents(); renderTools(); renderCtxNotes();
+  drawCtx(); renderNow(ctxSel); renderCum(); renderHistory(); renderEvents(); renderTools(); renderCtxNotes();
 }
 function wireCtx() {
   cv2.addEventListener('mousemove', e => {

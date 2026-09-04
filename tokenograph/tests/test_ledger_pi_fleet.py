@@ -139,6 +139,8 @@ class LedgerTests(unittest.TestCase):
         self.assertGreater(T["unloaded_direct_eff"], T["unloaded_deferred_eff"])
         for s in L["series"]:  # estimates never exceed the measured window
             self.assertLessEqual(sum(s["g"].values()), s["m"] + 1)
+        self.assertEqual(L["history"]["k"], 20)
+        self.assertEqual(L["history"]["now"], 0)  # only four requests: nothing is older than 20
         cost = d["stats"]["cost"]
         self.assertEqual(cost["pricing"]["model"], "claude-sonnet-4-6")
         self.assertAlmostEqual(cost["cache_write"], (3000 + 900 + 4000 + 12000) * 2.0 * 3 / 1e6, places=9)
@@ -246,6 +248,17 @@ class FleetTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HistoryTests(unittest.TestCase):
+    def test_resent_history_grows_with_the_run(self):
+        entries, _ = make_sample.generate(hours=2.0, laps=6, seed=9)
+        L = tokenograph.analyze(entries, source="mem")["ledger"]
+        olds = [s["old"] for s in L["series"]]
+        self.assertEqual(olds[:20], [0] * 20)
+        self.assertGreater(max(olds[20:]), 0)
+        self.assertTrue(all(s["old"] <= s["m"] for s in L["series"]))
+        self.assertGreater(L["history"]["resent_tokens"], 0)
 
 
 class GraphTests(unittest.TestCase):

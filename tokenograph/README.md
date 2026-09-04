@@ -25,17 +25,131 @@ python3 -m tokenograph json  <session-id-or-path>    # the computed numbers, for
 is detected from the file (`--format claude|pi` to force it). Subagent transcripts stored
 next to a Claude Code session are merged in (`--no-subagents` to skip).
 
-## Sources
+Agents starting a session in this folder: read `AGENTS.md` first (Claude Code loads it
+through `CLAUDE.md`). The evidence behind every claim below is in `docs/field-notes.md`.
 
-| agent | where tokenograph looks | what the file records |
+## Using it from the terminal
+
+**Install.** Any of these works; none needs a dependency.
+
+```
+git clone https://github.com/AI-et-al/tokenograph && cd tokenograph
+python3 -m tokenograph --version              # run from the checkout
+pipx install .                                # or: pip install .  -> a `tokenograph` command
+pipx install --editable .                     # same, but edits to the checkout take effect
+pipx install git+https://github.com/AI-et-al/tokenograph
+```
+
+The examples below use `tokenograph ...`; substitute `python3 -m tokenograph ...` from a
+checkout.
+
+**Find sessions.** Claude Code writes to `~/.claude/projects/<project>/<session>.jsonl`,
+pi to `~/.pi/agent/sessions/<cwd>/<stamp>_<id>.jsonl`. `CLAUDE_CONFIG_DIR` and
+`PI_CODING_AGENT_DIR` are honoured.
+
+```
+tokenograph list                # newest first: time, size, agent, id prefix, project, first prompt
+tokenograph list -n 50
+```
+
+**Watch a session while it runs.** Open a second terminal next to the agent:
+
+```
+tokenograph serve latest --open            # http://127.0.0.1:8787, follows the transcript
+tokenograph serve b5210cab --port 9000 --interval 5
+```
+
+The page polls the file; the spinner beside the context ring means live. Leave it open
+for the whole run: the rebuild list and the re-sent-history line are most useful at the
+moment they change.
+
+**Report on a finished session.**
+
+```
+tokenograph build latest -o panel.html                       # self-contained, open anywhere
+tokenograph build latest --title "16h port to the new runtime" -o port.html
+tokenograph build ~/.claude/projects/-home-me-app/1234abcd.jsonl -o app.html
+```
+
+**Every session on the machine, with herdr's states.**
+
+```
+tokenograph fleet --serve --open           # http://127.0.0.1:8788, rows link to live panels
+tokenograph fleet -o fleet.html --limit 50 # static snapshot
+```
+
+**The numbers, for scripts and other frontends.**
+
+```
+tokenograph json latest --pretty | jq .stats
+tokenograph json latest | jq '.ledger.events'          # cache rebuilds with causes
+tokenograph json latest | jq '.ledger.history'         # re-sent history
+tokenograph json latest | jq '.ledger.tools'           # deferred vs direct tool loading
+tokenograph json latest | jq '.ledger.cum.rows[:5]'    # most expensive categories
+```
+
+**The session as a graph.**
+
+```
+tokenograph graph latest -o session.graphml   # Gephi, yEd, igraph
+tokenograph graph latest -o session.json      # networkx.node_link_graph(data, edges="links")
+tokenograph graph latest -o session.csv       # session.nodes.csv + session.edges.csv for Neo4j
+```
+
+**Options that matter.**
+
+| flag | effect |
+|---|---|
+| `--title T` | panel title; default is the first prompt, or pi's session name |
+| `--context-window N` | window size for the fill ring; default 200k, or 1M once a request exceeds 200k |
+| `--price IN,OUT[,READ,W5M,W1H]` | $/M tokens and cache multipliers, overriding the built-in dated table |
+| `--format claude\|pi` | force the adapter instead of detecting it |
+| `--no-subagents` | ignore subagent transcripts stored beside a Claude Code session |
+| `--port`, `--host`, `--interval` | serve options; interval is the browser poll in seconds |
+
+**Reading the panel.** Values with a `~` are estimates; hover a stats label for its
+definition. In the Context card, click a bar to inspect an earlier request, click a
+category row to expand its items, and read the rebuild list first: a rebuild is the
+single most expensive event a session can have.
+
+**Troubleshooting.**
+
+- `no sessions found`: check the paths above and the environment variables.
+- `No module named tokenograph`: `python3 -m tokenograph` only works from inside the checkout,
+  the folder that contains `tokenograph/__init__.py`. From anywhere else use the installed
+  `tokenograph` command (`pipx install --editable <path-to-checkout>`).
+- Cost shows `–`: the model is not in the pricing table; pass `--price`.
+- `offline` beside the ring in serve mode: the server stopped; restart it.
+- The fleet says herdr is not reachable: herdr is not running, or its socket is elsewhere;
+  set `HERDR_SOCKET_PATH`, which herdr exports inside its panes.
+
+## Harnesses
+
+| harness | support | how to wire it |
 |---|---|---|
-| Claude Code | `~/.claude/projects/<project>/<session>.jsonl` (`CLAUDE_CONFIG_DIR` respected) | one entry per streamed content block with a timestamp, exact usage per request, tool results, injected reminders, the system prompt (`prompt_snapshot`), compaction markers |
-| pi ([pi-mono](https://github.com/badlogic/pi-mono)) | `~/.pi/agent/sessions/<cwd>/<stamp>_<id>.jsonl` (`PI_CODING_AGENT_DIR` respected) | one entry per message with start and end timestamps, usage including pi's own cost figure, tool results, compactions, model changes |
+| Claude Code | native | nothing to do; transcripts are read from `~/.claude/projects` |
+| pi | native | nothing to do; sessions are read from `~/.pi/agent/sessions` |
+| herdr | fleet join | run herdr's own Claude Code and pi integrations (`herdr integration install claude`, `... pi`); they report each pane's session id, and `tokenograph fleet` joins on it and shows herdr's status next to its own |
+| Codex CLI, OpenCode, Gemini CLI, Cursor, aider | not yet | each writes a session log; see "Adding an adapter" |
+| llama.cpp, SGLang, vLLM servers | not yet | the server's per-request timings would make tg/s and pp/s measured instead of estimated; an adapter over the server log or a logging proxy is the path |
 
-pi records no per-block timing and no system prompt, so for pi sessions the prefill/decode
-split comes from a latency fit and the system prompt shows up under "tool schemas &
-unmeasured". pi's recorded cost is shown next to tokenograph's estimate; on pi's own test
-fixtures the two agree to the cent.
+What each format records decides what can be measured:
+
+- Claude Code writes one entry per streamed block with a timestamp and exact usage, the
+  full system prompt, every injected reminder, and compaction markers. Everything in the
+  ledger is possible because of that.
+- pi writes one entry per message with start and end times, usage including its own cost,
+  tool results, compactions and model changes, but no system prompt and no per-block
+  timing. So for pi the prefill split is a latency fit and the system prompt appears
+  under "tool schemas & unmeasured". pi's recorded cost is shown next to the estimate;
+  on pi's fixtures they agree to the cent.
+
+**Adding an adapter.** Write a `_scan_<name>(entries, sub, ctx, stream)` in
+`tokenograph/__init__.py` that fills the same `ctx` the two existing scanners fill:
+model calls with start and end times and usage, tool calls paired to results, prompts,
+compactions, and ledger items with a category and a size. Add the format to
+`detect_format` and `iter_sessions`. Everything downstream, phases, ledger, graph, fleet,
+is shared. The hand-built transcripts in `tests/` show the minimum each field needs.
 
 ## The panel
 
@@ -177,6 +291,34 @@ Questions that are one query away once it is a graph: which tool results are sti
 paid for twenty requests later (follow `feeds` then `follows`); which lap's prompt led to
 the most expensive subgraph; what the shortest path from a system-prompt change to a
 rebuild looks like; which categories dominate the window after each compaction.
+
+## What we learned building it
+
+The short list; numbers and evidence in `docs/field-notes.md`, the agent brief in
+`AGENTS.md`.
+
+- Prompt caching is prefix matching over tools, then system prompt, then messages. One
+  mid-session system-prompt edit by the harness recomputed 254k tokens, about $5 on Fable
+  5.1. Keep the environment stable during long turns and compact before a known change.
+- Replayed history is cheap under caching, about $7 of a $126 session for 28 million
+  re-sent token-times, and its real costs are rebuild exposure and window headroom.
+- Deferred tool loading wins by keeping unused tools out, not by making used tools
+  cheaper; batch schema fetches with real work.
+- Heredoc file writes sit in the window for the rest of the session.
+- Extraction-based graph memory lost to flat retrieval on verbatim recall in the one
+  careful comparison we read; state-delta memory cut GUI-agent prompt tokens threefold.
+  Structure is compression; measure the regression before adopting it.
+
+## Roadmap
+
+In order of how much each changes what the tool can tell you: exact token counts through
+the API's counting endpoint; adapters with real server timings for local models and for
+Codex, OpenCode and Gemini CLI; an `advise` command that turns the ledger into the three
+actions with the highest expected saving; Claude Code and herdr hooks that surface cost
+and rebuilds where you are looking; fleet economics over time; experiments on the graph
+export such as simulating a forgetting policy against your own sessions; scrubbed,
+shareable sessions and a `--redact` flag for built panels. Details in
+`docs/field-notes.md`, section 6.
 
 ## Data model
 
