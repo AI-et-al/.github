@@ -78,11 +78,23 @@ def generate(hours=16.0, laps=99, seed=7, start=None, decode_tok_s=62.0, prefill
     context = 18_000  # tokens currently in the conversation
     weights = [w for _, w, _, _, _ in TOOLS]
 
+    system_prompt = ["You are an interactive agent that helps users with software engineering tasks. " * 30,
+                     "# Environment\n" + "Working directory: /home/dev/port. Platform: linux. " * 12,
+                     "# Delivering work\n" + "Finish the whole task, report faithfully. " * 25]
+    skill_listing = "\n".join(f"- skill-{i}: does thing number {i} when the user asks for it, with details." for i in range(40))
+    deferred = [f"mcp__server_{i // 8}__tool_{i}" for i in range(96)]
     for lap in range(1, laps + 1):
         prompt = ("Port the model to the new runtime layer by layer. Keep tests green, write notes after each "
                   "layer, and keep going until every layer passes." if lap == 1 else
                   f"continue (lap {lap}): pick up where you left off")
         emit({"type": "user", "message": {"role": "user", "content": prompt}}, t)
+        if lap == 1:
+            emit({"type": "attachment", "attachment": {"type": "skill_listing", "content": skill_listing, "skillCount": 40, "isInitial": True},
+                  "rendered": [{"content": "<system-reminder>\n" + skill_listing + "\n</system-reminder>"}]}, t)
+            emit({"type": "attachment", "attachment": {"type": "deferred_tools_delta", "addedNames": deferred, "removedNames": []},
+                  "rendered": [{"content": "<system-reminder>deferred tools: " + ", ".join(deferred) + "</system-reminder>"}]}, t)
+            context += (len(skill_listing) + 20 * len(deferred)) // 4
+        emit({"type": "attachment", "attachment": {"type": "prompt_snapshot", "systemPrompt": system_prompt, "hostPrompt": "h"}}, t)
         context += 40
         lap_end = t + timedelta(seconds=lap_target * lognormal(rng, 1.0, 0.25))
         while True:

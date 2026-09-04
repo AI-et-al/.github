@@ -1,128 +1,206 @@
 # lapboard
 
-A telemetry panel for long-horizon Claude Code sessions. Point it at a session
-transcript and it renders one page: throughput, an additive wall-clock split, token
-accounting, and a per-row timeline of every call the agent made.
+Telemetry and token accounting for long-horizon coding-agent sessions. Point it at a
+Claude Code transcript or a pi session and it renders one page: throughput, an additive
+wall-clock split, token and cost accounting, a per-row timeline of every call, and a
+ledger of what is in the context window and what each part has cost.
 
 ![lapboard on a synthetic 16-hour run](examples/sample-panel.png)
 
-It is a clean-room equivalent of the run-stats panel Han Xiao posted for a 16-hour
-autonomous coding run ([the post](https://x.com/hxiao/status/2095609195030864347)),
-rebuilt for Claude Code transcripts. Python standard library only, no build step.
+It started as a clean-room equivalent of the run-stats panel Han Xiao posted for a
+16-hour autonomous coding run ([the post](https://x.com/hxiao/status/2095609195030864347)).
+Python standard library only, no build step.
 
 ```
-python3 lapboard.py list                          # sessions under ~/.claude/projects, newest first
+python3 lapboard.py list                          # Claude Code and pi sessions, newest first
 python3 lapboard.py build latest -o panel.html    # self-contained HTML, open it anywhere
 python3 lapboard.py serve latest --open           # live panel that follows a running session
+python3 lapboard.py fleet --serve --open          # every session, herdr-style states, live
 python3 lapboard.py json  <session-id-or-path>    # the computed numbers, for other frontends
 ```
 
-`latest`, a session id prefix, a project directory, or a path to a `.jsonl` all work.
-Subagent transcripts stored next to the session are merged in (`--no-subagents` to skip).
+`latest`, a session id prefix, a directory, or a path to a `.jsonl` all work. The format
+is detected from the file (`--format claude|pi` to force it). Subagent transcripts stored
+next to a Claude Code session are merged in (`--no-subagents` to skip).
 
-## What the panel shows
+## Sources
 
-**Header.** The run title (the first prompt unless `--title` is given), session id,
-model, working directory, branch, CLI version.
+| agent | where lapboard looks | what the file records |
+|---|---|---|
+| Claude Code | `~/.claude/projects/<project>/<session>.jsonl` (`CLAUDE_CONFIG_DIR` respected) | one entry per streamed content block with a timestamp, exact usage per request, tool results, injected reminders, the system prompt (`prompt_snapshot`), compaction markers |
+| pi ([pi-mono](https://github.com/badlogic/pi-mono)) | `~/.pi/agent/sessions/<cwd>/<stamp>_<id>.jsonl` (`PI_CODING_AGENT_DIR` respected) | one entry per message with start and end timestamps, usage including pi's own cost figure, tool results, compactions, model changes |
 
-**Stats.**
+pi records no per-block timing and no system prompt, so for pi sessions the prefill/decode
+split comes from a latency fit and the system prompt shows up under "tool schemas &
+unmeasured". pi's recorded cost is shown next to lapboard's estimate; on pi's own test
+fixtures the two agree to the cent.
 
-| item | meaning |
-|---|---|
-| tg/s | completion tokens per second of decode time (reasoning + generation) |
-| pp/s | computed prompt tokens per second of prefill time |
-| laps · avg/lap | one lap per user prompt (an autonomous loop that re-prompts makes one lap per iteration); mean time from one prompt to the next |
-| ring | context-window fill of the latest request (200k, or 1M once a request exceeds 200k; `--context-window` overrides) |
-| TIME | wall clock = prefill + reasoning + generation + tools + compaction + idle. Every instant of the session is attributed to exactly one phase, so the parts add up |
-| TOKENS | total = prompt computed + prompt cached + completion. Reasoning tokens are a subset of completion; tool-result tokens are a subset of prompt |
+## The panel
 
-**Activity.** One row per category over wall-clock time, with a count or a total on the
-right: an "All activity" strip, the laps numbered in order, the three assistant phases,
-one row per tool name (rare tools fold into "other tools"), compactions, interrupts and
-API errors, and idle stretches. Hover any bar for the call behind it (timings, tokens,
-the command or file). Drag to zoom, double-click to reset. In `serve` mode the page
-polls the transcript and the spinner next to the ring shows it is live.
+**Stats.** tg/s (completion tokens per second of decode time), pp/s (computed prompt
+tokens per second of prefill time), laps (one per user prompt; an autonomous loop that
+re-prompts makes one lap per iteration) and the mean lap. The ring is the context-window
+fill of the latest request. TIME is additive: wall clock = prefill + reasoning +
+generation + tools + compaction + idle, every instant attributed to exactly one phase.
+TOKENS: total = prompt computed + prompt cached + completion; reasoning is a subset of
+completion. COST, when the model's pricing is known: output, cache writes (at the 5-minute
+or 1-hour write premium the API reported), cache reads (at the read discount), uncached
+input. `--price IN,OUT[,READ_MULT,WRITE5M_MULT,WRITE1H_MULT]` overrides the built-in table,
+which is a dated snapshot.
+
+**Activity.** One row per category over wall-clock time: an "All activity" strip, laps
+numbered in order, the three assistant phases, one row per tool name, compactions,
+interrupts and errors, idle stretches. Hover any bar for the call behind it; drag to zoom,
+double-click to reset. In `serve` mode the page follows the transcript and the spinner
+next to the ring shows it is live.
+
+**Context.** The window reconstructed at every request, as a stacked chart with the
+API's measured input total drawn over it, and three tables:
+
+- *in the window*: what the latest request carried, by category and by item: system prompt
+  sections, the built-in tool block, tool schemas loaded on demand, injected reminders and
+  listings (skills listing, MCP instructions, deferred tool names, agent listing, task and
+  budget reminders), loaded skills by name, prompts, images, assistant text, tool inputs
+  and tool results by tool, re-sent thinking, compaction summaries. Click a bar in the
+  chart to see the same breakdown for an earlier request.
+- *what each category cost*: over the whole session, the tokens each category had computed
+  (uncached input plus cache writes) and served from cache, its share weighted by the cache
+  read discount, and its dollar share of the input bill. This is the "what is costing me
+  what" table: a 20k-token skill loaded once and re-sent for 40 requests, a 150k-token tool
+  result, the listings that ride along on every request.
+- *cache rebuilds*: requests where the cached prefix was lost and most of the window was
+  recomputed, with the likely cause: a system-prompt section that changed (named, with its
+  size delta), a compaction, a cache TTL that expired during an idle gap, a model switch.
+  On Claude Fable 5.1 a single rebuild of a 350k-token window is a five-dollar event.
+- *tool loading*: deferred vs. direct, see below.
 
 ## How it works
 
-Claude Code appends one JSON line per event to
-`~/.claude/projects/<project>/<session>.jsonl`. lapboard reads that file, and, in
-`serve` mode, keeps reading it as it grows.
-
-- **Model calls.** Each streamed content block of a response is its own entry, with a
-  timestamp and the request's usage. Blocks are grouped by `requestId`. A request starts
-  at the last non-assistant entry before its first block (the prompt or tool result that
-  triggered it) and ends at its last block.
-- **Tool calls.** A `tool_use` block is paired with the `tool_result` that carries its
-  id. Tools start as soon as their block has streamed, so calls in one message overlap
-  each other and the tail of the stream; the wall-clock split handles overlap by giving
-  model phases priority over tools.
-- **Laps.** Every user prompt that is not a tool result, a compaction summary, or an
-  interrupt marker opens a lap.
-- **Compactions.** `compact_boundary` system entries and `isCompactSummary` messages.
-  The compaction interval runs from the last entry before the boundary to the summary.
-- **Idle.** Time with nothing running, split into waiting for the user (an idle stretch
-  that ends at a prompt) and overhead.
+- **Model calls.** Claude Code writes each streamed content block as its own entry with a
+  timestamp and the request's usage; blocks are grouped by `requestId`. A request starts at
+  the last non-assistant entry before its first block and ends at its last block. pi
+  writes one entry per message; the message carries the request's start time and the entry
+  its end.
+- **Tool calls.** A `tool_use` block is paired with the `tool_result` carrying its id.
+  Claude Code starts a tool as soon as its block has streamed, so calls in one message
+  overlap; pi runs them after the message, one after another. The wall-clock split gives
+  model phases priority over tools where they overlap.
+- **Laps, compactions, idle.** Every user prompt that is not a tool result, a compaction
+  summary or an interrupt marker opens a lap. Compactions are `compact_boundary` markers
+  and `isCompactSummary` messages (Claude Code) or `compaction` entries (pi). Idle is time
+  with nothing running, split into waiting for the user and overhead.
+- **Context ledger.** Every entry that ends up in the prompt becomes an item with a
+  category and a size. At each request the window is the latest system prompt snapshot
+  plus every item since the last compaction (thinking blocks only while the turn
+  continues). Text is converted to tokens at two rates, one for tool traffic (shell output,
+  JSON, code) and one for prose, both calibrated on this session: on requests served from
+  a warm cache, the API's computed tokens are exactly the new content since the previous
+  request. When a system-prompt change rebuilds the cache, what stays cached is the prefix
+  before the system prompt, i.e. the built-in tool block; lapboard uses that as the floor
+  of "tool schemas & unmeasured" and scales estimates that exceed the measured window.
+  Each request's input bill is then split across the categories by the tokens they
+  contributed, new content first.
 
 ### Measured vs. estimated
 
-Everything above is measured from timestamps and usage counts. The transcript does not
-record the API's time to first token, so the split of a request's latency between
-prefill and decode is estimated:
+Timestamps, per-request usage, cache reads and writes, thinking tokens (when reported),
+and pi's cost are measured. Estimated, and marked `~` in the panel: the prefill/decode
+split (from the decode speed observed on visible text after thinking blocks; a latency fit
+when there is no per-block timing), token counts derived from characters, image tokens
+(about width × height / 750 after the model's downscale), and dollar cost from the pricing
+table. On a synthetic run with known timings the prefill estimate lands within a few
+percent and decode and tool times are exact (`tests/`).
 
-1. For requests that stream visible text or tool calls after a thinking block, the time
-   from the end of thinking to the last block is pure decode of a known number of
-   tokens. Pooled over the session, that gives the decode speed.
-2. Each request's thinking phase is then split: thinking tokens divided by that speed is
-   reasoning time, and the remainder of the time-to-end-of-thinking is prefill.
-3. Requests without a thinking block get decode time from their output tokens and the
-   rest as prefill.
+### Deferred vs. direct tool loading
 
-Estimated figures carry a `~` in the panel. On a synthetic run with known timings the
-estimate lands within a few percent (see `tests/`). If a session never streams text
-after thinking, the split is not separable and prefill is reported as zero.
+Claude Code can keep a tool's schema out of the prompt and list only its name; the model
+fetches the schema with `ToolSearch` when it wants the tool. Whether that is cheaper than
+loading the schema directly depends on three measurable quantities, and the panel computes
+all three from the transcript:
 
-Two more approximations: tool-result tokens are counted at four characters per token,
-and reasoning tokens fall back to a character-ratio estimate when the API does not
-report `thinking_tokens`. The footer of each panel states which applies.
+1. **The listing.** The deferred names ride along on every request. Cost = listing tokens
+   × requests, almost all of it served from cache.
+2. **The search round trip.** If a `ToolSearch` call had a request to itself, the extra
+   round trip cost that request's output plus the newly computed input of the next request,
+   and its latency. If the model batched the search with other tool calls, the overhead is
+   only the search block and its result.
+3. **The schema, once loaded,** is re-sent on every later request, exactly as a directly
+   loaded schema would have been from request one. Unused deferred tools cost nothing but
+   their listing line; their schemas are taken as the average size of the ones that were
+   loaded, since the transcript never sees them.
+
+Effective tokens weight cached tokens by the model's cache-read multiplier, so the
+comparison reflects what you pay rather than raw token counts. The verdict line states the
+net for the session. In practice the round trips make deferral slightly more expensive for
+the handful of tools you do use and enormously cheaper for the dozens you do not; the table
+shows which tools were loaded solo, at which request, and how many requests re-sent them.
+
+## Fleet and herdr
+
+`lapboard fleet` lists every Claude Code and pi session on the machine with a state in
+[herdr](https://github.com/ogulcancelik/herdr)'s vocabulary, derived from the transcript
+tail: **working** (producing or running a tool), **blocked** (a tool call has waited more
+than 20 s for its result, usually a permission prompt or a question), **done** (the turn
+ended and nobody has prompted since), **idle**. Each row shows laps, wall clock, context
+fill, computed and cached tokens, output, estimated cost and last activity; in `--serve`
+mode the rows link to live per-session panels.
+
+When herdr is running, lapboard also asks it. herdr exposes a newline-delimited JSON
+socket at `$XDG_CONFIG_HOME/herdr/herdr.sock` (or `~/.config/herdr/herdr.sock`, or the
+`HERDR_SOCKET_PATH` a pane inherits); `agent.list` returns every pane's agent, its
+detected status and the agent's own session id, which herdr's Claude Code and pi
+integrations report to it at session start. lapboard joins on that id (falling back to a
+unique working directory) and shows herdr's status next to its own, with herdr's driving
+the ordering. Nothing is written to herdr.
 
 ## Data model
 
 `lapboard.py json` emits what the page renders:
 
 ```
-meta   title, session id, models, cwd, branch, estimates used, live flag
-base   session start (epoch seconds); all times below are relative to it
-stats  tg_s, pp_s, laps, avg_lap_s, time{...}, tokens{...}, context{...}, counts{...}
-calls  k=m model call {t0,t1,p:[prefill_end,reasoning_end],tok:[computed,cached,out,thinking],lap,stop,tools}
-       k=t tool call  {t0,t1,n:name,l:label,ch:result chars,err,open}
-       k=c compaction, k=x interrupt, k=e API error
-laps   {n,t0,t1,calls,tools,l:prompt}
-tools  per-name count, total seconds, errors
-idle   [t0,t1,'w'|'o'] waiting-for-user or overhead
+meta    title, agent (claude-code | pi), session id, models, cwd, branch, estimates used
+base    session start (epoch seconds); all times below are relative to it
+stats   tg_s, pp_s, laps, avg_lap_s, time{...}, tokens{...}, context{...}, counts{...},
+        cost{total,input,output,cache_read,cache_write,pricing} or null, cost_reported (pi)
+calls   k=m model call {t0,t1,p:[prefill_end,reasoning_end],tok:[computed,cached,out,thinking],lap,stop,tools}
+        k=t tool call  {t0,t1,n:name,l:label,ch:result chars,err,open}
+        k=c compaction, k=x interrupt, k=b user shell command (pi), k=e API error
+laps    {n,t0,t1,calls,tools,l:prompt}
+tools   per-name count, total seconds, errors
+idle    [t0,t1,'w'|'o'] waiting-for-user or overhead
+ledger  cpt, cpt_prose, tool_block_hint, series[{t,m,in,cc,cr,g{category:tokens}}],
+        now{rows[...]}, cum{rows[...],computed,cached,requests}, events[...], tools{...}
 ```
 
-To reproduce the screenshot above without a real session:
+`lapboard.py fleet` (static) or `/fleet.json` (served) emits one row per session with the
+same stats plus `state`, `herdr` (status, pane, workspace, name) and `age_s`.
+
+## Files
+
+```
+lapboard.py              adapters (Claude Code, pi), metrics, ledger, fleet, CLI
+panel.html               the session page; build inlines the data into it
+fleet.html               the fleet page
+examples/make_sample.py  synthetic 16h transcript generator with ground-truth timings
+examples/sample-panel.png    the panel built from that synthetic run (screenshot above)
+tests/                   python3 -m unittest discover -s tests
+```
+
+To reproduce the screenshot without a real session:
 
 ```
 python3 examples/make_sample.py --hours 16 --laps 99 --out /tmp/sample.jsonl
 python3 lapboard.py build /tmp/sample.jsonl --title "16h long-horizon task on model porting" -o sample.html
 ```
 
-## Files
-
-```
-lapboard.py              parser, metrics, CLI (list / build / serve / json)
-panel.html               the page; build inlines the data into it
-examples/make_sample.py  synthetic 16h transcript generator with ground-truth timings
-examples/sample-panel.png    the panel built from that synthetic run (screenshot above)
-tests/test_lapboard.py   python3 -m unittest discover -s tests
-```
-
 ## Limitations
 
-- Timing resolution is the transcript's: whole requests and tool calls, not token
-  streams. Permission prompts and hook execution inside a tool call count as tool time.
-- Sessions resumed with `--resume` continue in the same file; sessions from before
-  Claude Code wrote per-block entries lack the reasoning/generation split.
-- Cost is not computed; pricing depends on the model and cache tier.
+- Timing resolution is the transcript's: whole requests and tool calls, not token streams.
+  Permission prompts and hook execution inside a tool call count as tool time.
+- The built-in tool block is never written to a Claude Code transcript; it is inferred from
+  cache retention when a system-prompt change happens, otherwise it is the residual.
+- Image tokens follow the documented downscale rule; the API does not report them
+  separately, so they cannot be calibrated.
+- The pricing table is a snapshot and does not cover partner platforms; pass `--price`.
+- Cost is attributed to categories by token share, which is the only split the usage
+  counters support.
