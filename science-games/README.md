@@ -2,8 +2,14 @@
 
 Three self-contained HTML games, one for each result OpenAI claimed on October 26, 2026.
 Each takes about 25 minutes, needs no installation, and runs in any modern browser.
-Open the file directly, or play the published claude.ai artifact versions linked from the pull
-request. Sound starts only after you press "Play with sound"; "Play muted" works too.
+Open the file directly, or play the published versions:
+
+- Needle & Wave: https://claude.ai/artifact/P6ahyFv9pN5PDHNrwktkod
+- The Exponential Wall: https://claude.ai/artifact/V6iYEtkVTk1RS2tzkzamNM
+- Gauge & Gap: https://claude.ai/artifact/QFKNTJdWJPrMEdVy7pj9Mp
+
+The published links are private to their owner until shared from the page's Share menu.
+Sound starts only after you press "Play with sound"; "Play muted" works too.
 
 | Game | File | Field | What you walk away understanding |
 |---|---|---|---|
@@ -36,7 +42,9 @@ asserts that they are established.
 
 ## Testing
 
-Each game was smoke-tested headless with Playwright (Chromium): load with the artifact document
-skeleton, collect page errors, start the game muted and with sound, walk every level through its
-exposed debug hooks (`window.__game.gotoLevel(i)`, `window.__game.completeLevel()`), and screenshot
-desktop and phone widths in both themes.
+Each game was smoke-tested headless with Playwright (Chromium), twice: once by its builder and once
+independently. The independent pass loads the file inside the artifact document skeleton, collects
+page errors, starts the game muted and with sound, walks every level through the exposed debug hooks
+(`window.__game.gotoLevel(i)`, `window.__game.completeLevel()`), checks for horizontal overflow at
+1200 px and 400 px in both themes, and verifies that quick-check answers are shuffled and scored
+correctly. All three passed with zero page errors.

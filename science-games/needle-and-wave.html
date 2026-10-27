@@ -1,0 +1,1821 @@
+<title>Needle &amp; Wave</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout concept: one dark observatory console; a wide board on the left, a reading card on the right,
+   everything stacking to one column on a phone. */
+:root {
+  --bg: #f4ecdd;
+  --bg2: #ebe0cb;
+  --card: #fbf6ec;
+  --fg: #1c1a3b;
+  --muted: #5d5a7c;
+  --line: #d5c7ad;
+  --accent: #0e7c7f;
+  --accent-soft: rgba(14, 124, 127, 0.14);
+  --accent2: #b4621a;
+  --accent2-soft: rgba(180, 98, 26, 0.16);
+  --good: #2e7d4b;
+  --bad: #b23a30;
+  --star: #c98a12;
+  --shadow: 0 10px 30px rgba(28, 26, 59, 0.10);
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "Atkinson Hyperlegible", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a0e2a;
+    --bg2: #111636;
+    --card: #141a3f;
+    --fg: #efe4cd;
+    --muted: #a9a2bf;
+    --line: #283260;
+    --accent: #3af0d2;
+    --accent-soft: rgba(58, 240, 210, 0.14);
+    --accent2: #ffb648;
+    --accent2-soft: rgba(255, 182, 72, 0.16);
+    --good: #74e39b;
+    --bad: #ff7f72;
+    --star: #ffd166;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a0e2a;
+  --bg2: #111636;
+  --card: #141a3f;
+  --fg: #efe4cd;
+  --muted: #a9a2bf;
+  --line: #283260;
+  --accent: #3af0d2;
+  --accent-soft: rgba(58, 240, 210, 0.14);
+  --accent2: #ffb648;
+  --accent2-soft: rgba(255, 182, 72, 0.16);
+  --good: #74e39b;
+  --bad: #ff7f72;
+  --star: #ffd166;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--bg);
+}
+.app {
+  min-height: 100%;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 40px;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 4.2rem); line-height: 1.02; font-variation-settings: "opsz" 144; }
+h2 { font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.15; }
+h3 { font-size: 1.1rem; }
+p { margin: 0; }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+button, .btn {
+  font: inherit;
+  font-weight: 700;
+  color: var(--fg);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease;
+  min-height: 42px;
+}
+button:hover { border-color: var(--accent); }
+button:active { transform: translateY(1px); }
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible, summary:focus-visible, a:focus-visible {
+  outline: 3px solid var(--accent2);
+  outline-offset: 2px;
+}
+button.primary { background: var(--accent); color: var(--bg); border-color: transparent; }
+button.primary:hover { filter: brightness(1.08); }
+button.ghost { background: transparent; }
+button.small { padding: 6px 10px; min-height: 34px; font-size: 0.9rem; }
+button[disabled] { opacity: 0.5; cursor: default; }
+button.active { border-color: var(--accent); background: var(--accent-soft); }
+a { color: var(--accent); }
+.hidden-visually { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Title screen */
+.title {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  padding-block: 32px 24px;
+}
+.title .copy { display: grid; gap: 18px; max-width: 560px; }
+.title .promise { font-size: 1.15rem; color: var(--muted); max-width: 42ch; }
+.title .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.title ul { margin: 0; padding-left: 1.1em; color: var(--fg); display: grid; gap: 4px; }
+.title ul li { font-size: 0.98rem; }
+.hero-canvas-wrap { aspect-ratio: 1 / 1; max-width: 100%; width: 100%; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: var(--bg2); box-shadow: var(--shadow); }
+.hero-canvas-wrap canvas { width: 100%; height: 100%; display: block; }
+.footer-note { color: var(--muted); font-size: 0.85rem; margin-top: 12px; }
+
+/* Map */
+.map { display: grid; gap: 20px; padding-block: 12px; }
+.map-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
+.path { display: grid; gap: 10px; }
+.node {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  min-height: 72px;
+}
+.node:hover { border-color: var(--accent); }
+.node .idx { font-family: var(--font-display); font-size: 1.6rem; color: var(--accent); text-align: center; }
+.node.locked .idx { color: var(--muted); }
+.node .name { font-weight: 700; }
+.node .sub { color: var(--muted); font-size: 0.9rem; font-weight: 400; }
+.node .stars { font-family: var(--font-mono); color: var(--star); letter-spacing: 0.1em; white-space: nowrap; }
+.node.boss { border-color: var(--accent2); }
+.progress { height: 8px; background: var(--bg2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+.progress > div { height: 100%; background: var(--accent); width: 0%; transition: width 0.4s ease; }
+
+/* Level shell */
+.hud {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.hud .where { display: grid; line-height: 1.2; min-width: 0; }
+.hud .where .lv { font-family: var(--font-display); font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud .stats { display: flex; gap: 14px; margin-left: auto; font-family: var(--font-mono); font-size: 0.9rem; }
+.hud .stats span b { color: var(--accent); }
+.hud .tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.level-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 20px;
+  align-items: start;
+}
+.board {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.board-canvas-wrap { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--bg2); box-shadow: var(--shadow); }
+.board-canvas-wrap canvas { display: block; width: 100%; height: auto; touch-action: none; }
+.overlay-msg { position: absolute; left: 12px; top: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none; }
+.chip { background: color-mix(in srgb, var(--bg) 82%, transparent); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-family: var(--font-mono); font-size: 0.78rem; backdrop-filter: blur(6px); }
+.chip.accent { border-color: var(--accent); color: var(--accent); }
+.chip.accent2 { border-color: var(--accent2); color: var(--accent2); }
+.controls { display: grid; gap: 12px; }
+.controls .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.controls .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px 14px; }
+.slider { display: grid; gap: 2px; min-width: 0; }
+.slider label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); gap: 8px; }
+.slider label .val { font-family: var(--font-mono); color: var(--fg); }
+.slider input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; min-height: 28px; }
+.meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.meter { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; }
+.meter .lbl { font-size: 0.8rem; color: var(--muted); }
+.meter .val { font-family: var(--font-mono); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.meter .bar { height: 6px; border-radius: 999px; background: var(--bg2); overflow: hidden; }
+.meter .bar > div { height: 100%; background: var(--accent); width: 0%; transition: width 0.2s ease; }
+.meter.warm .bar > div { background: var(--accent2); }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 84px);
+  min-width: 0;
+}
+.card .idea { font-size: 1.02rem; }
+.card .goal { padding: 10px 12px; border-left: 3px solid var(--accent2); background: var(--accent2-soft); border-radius: 0 10px 10px 0; font-size: 0.95rem; }
+.card details { border-top: 1px solid var(--line); padding-top: 10px; }
+.card summary { cursor: pointer; font-weight: 700; color: var(--accent); list-style: none; display: flex; align-items: center; gap: 8px; }
+.card summary::before { content: "+"; font-family: var(--font-mono); width: 1em; }
+.card details[open] summary::before { content: "–"; }
+.card .deeper { color: var(--fg); font-size: 0.93rem; display: grid; gap: 8px; margin-top: 8px; max-width: 65ch; }
+.card .deeper p { margin: 0; }
+.card .finish { display: grid; gap: 8px; }
+.status { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
+.status b { color: var(--fg); }
+
+/* Quiz / overlays */
+.modal-back {
+  position: fixed; inset: 0; z-index: 20;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(4px);
+  display: grid; place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px;
+  overflow: auto;
+}
+.modal {
+  width: min(680px, 100%);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+  box-shadow: var(--shadow);
+}
+.modal.wide { width: min(860px, 100%); }
+.options { display: grid; gap: 8px; }
+.options button { text-align: left; font-weight: 400; padding: 12px 14px; line-height: 1.35; }
+.options button.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 15%, transparent); }
+.options button.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 15%, transparent); }
+.explain { padding: 10px 12px; border-radius: 10px; background: var(--bg2); font-size: 0.95rem; }
+.modal .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; align-items: center; }
+.big-stars { font-family: var(--font-mono); font-size: 2.4rem; letter-spacing: 0.15em; color: var(--star); text-align: center; }
+.recap ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+.frontier { border-left: 3px solid var(--accent); padding: 10px 14px; background: var(--accent-soft); border-radius: 0 12px 12px 0; display: grid; gap: 8px; font-size: 0.95rem; }
+.frontier .mono { font-size: 0.82rem; word-break: break-word; }
+
+/* Notes drawer */
+.drawer-back { position: fixed; inset: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 31;
+  width: min(520px, 100%);
+  background: var(--card);
+  border-left: 1px solid var(--line);
+  padding-left: 20px;
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  padding-block: calc(env(safe-area-inset-top, 0px) + 16px) 24px;
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.drawer .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.gloss dt { font-weight: 700; margin-top: 10px; }
+.gloss dd { margin: 2px 0 0 0; color: var(--fg); font-size: 0.93rem; max-width: 60ch; }
+.sources li { margin-bottom: 6px; font-size: 0.9rem; }
+.sorter { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.pool, .slots { display: grid; gap: 8px; align-content: start; }
+.sort-card {
+  text-align: left; font-weight: 400; padding: 10px 12px; display: grid; gap: 2px; border-radius: 12px;
+}
+.sort-card b { font-weight: 700; }
+.sort-card small { color: var(--muted); }
+.sort-card.selected { border-color: var(--accent2); background: var(--accent2-soft); }
+.slot { border: 1px dashed var(--line); border-radius: 12px; min-height: 60px; display: grid; align-items: center; padding: 6px; }
+.slot .idx { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+.slot.filled { border-style: solid; }
+.slot.ok { border-color: var(--good); }
+.slot.ko { border-color: var(--bad); }
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform: translateX(-50%); z-index: 40;
+  background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 700; opacity: 0; transition: opacity 0.2s ease; pointer-events: none; max-width: calc(100vw - 32px); text-align: center; }
+.toast.show { opacity: 1; }
+.harmonics { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px 12px; }
+.kbd-hint { color: var(--muted); font-size: 0.82rem; }
+.reflist { font-size: 0.85rem; color: var(--muted); display: grid; gap: 2px; font-family: var(--font-mono); }
+.reflist .hit { color: var(--accent2); }
+
+@media (max-width: 560px) {
+  .overlay-msg { display: none; }
+}
+@media (max-width: 900px) {
+  .title { grid-template-columns: 1fr; }
+  .level-body { grid-template-columns: 1fr; }
+  .card { position: static; }
+  .hud .stats { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+<div class="app" id="app">
+  <section id="screen-title" class="title">
+    <div class="copy">
+      <div class="eyebrow">A harmonic analysis game</div>
+      <h1>Needle &amp; Wave</h1>
+      <p class="promise">Learn why a needle, a wave, and a Fourier series are the same problem, in about 25 minutes.</p>
+      <div class="actions">
+        <button class="primary" id="btn-play-sound">Play with sound</button>
+        <button id="btn-play-muted">Play muted</button>
+      </div>
+      <div>
+        <div class="eyebrow">What you'll learn</div>
+        <ul>
+          <li>How any periodic signal is built from sines, and what an L<sup>p</sup> norm measures.</li>
+          <li>Why narrow in time forces wide in frequency, and why that puts tubes everywhere.</li>
+          <li>How Besicovitch turned a needle in almost no area, and what a set of dimension 2 with zero area is.</li>
+          <li>Why tubes in different directions refuse to overlap: the Kakeya maximal conjecture.</li>
+          <li>Why waves can focus for an instant but not for an interval: local smoothing, the top of the chain.</li>
+        </ul>
+      </div>
+      <p class="footer-note" id="title-progress"></p>
+    </div>
+    <div class="hero-canvas-wrap"><canvas id="hero" width="600" height="600" aria-hidden="true"></canvas></div>
+  </section>
+
+  <section id="screen-map" class="map" hidden>
+    <div class="map-head">
+      <div>
+        <div class="eyebrow">Needle &amp; Wave</div>
+        <h2>Seven levels, one chain of ideas</h2>
+      </div>
+      <div class="hud-lite row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span class="status">Score <b id="map-score" class="num">0</b></span>
+        <button class="small" id="map-notes">Field notes</button>
+        <button class="small" id="map-music">Music: on</button>
+        <button class="small" id="map-sfx">SFX: on</button>
+        <button class="small ghost" id="map-reset">Reset progress</button>
+      </div>
+    </div>
+    <div class="progress"><div id="map-progress"></div></div>
+    <div class="path" id="path"></div>
+    <p class="footer-note">Levels unlock in order. Every level has a skip link, so nothing here can trap you. Stars are earned, not required.</p>
+  </section>
+
+  <section id="screen-level" hidden>
+    <header class="hud">
+      <div class="where">
+        <span class="eyebrow" id="hud-eyebrow">Level 1</span>
+        <span class="lv" id="hud-title">Build a wave</span>
+      </div>
+      <div class="stats">
+        <span>score <b id="hud-score">0</b></span>
+        <span>streak <b id="hud-streak">0</b></span>
+        <span id="hud-timer-wrap" hidden>time <b id="hud-timer">0:00</b></span>
+      </div>
+      <div class="tools">
+        <button class="small" id="hud-music" aria-pressed="true">Music</button>
+        <button class="small" id="hud-sfx" aria-pressed="true">SFX</button>
+        <button class="small" id="hud-notes">Notes</button>
+        <button class="small" id="hud-map">Map</button>
+      </div>
+    </header>
+    <div class="level-body">
+      <div class="board">
+        <div class="board-canvas-wrap">
+          <canvas id="board" width="900" height="600"></canvas>
+          <div class="overlay-msg" id="overlay"></div>
+        </div>
+        <div class="controls" id="controls"></div>
+      </div>
+      <aside class="card" id="card">
+        <div class="eyebrow" id="card-eyebrow">The idea</div>
+        <p class="idea" id="card-idea"></p>
+        <div class="goal" id="card-goal"></div>
+        <details id="card-details"><summary>Deeper</summary><div class="deeper" id="card-deeper"></div></details>
+        <div class="finish">
+          <div class="status" id="card-status"></div>
+          <button class="primary" id="btn-finish">Finish level: quick check</button>
+          <button class="ghost small" id="btn-skip">Skip ahead without the check</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>
+<div id="modal-root"></div>
+<div id="drawer-root"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(() => {
+'use strict';
+/* ------------------------------------------------------------------ utils */
+const $ = (id) => document.getElementById(id);
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const fmt = (n, d = 3) => (Number.isFinite(n) ? n.toFixed(d) : '–');
+const reducedMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function palette() {
+  return { bg: cssVar('--bg2'), card: cssVar('--card'), fg: cssVar('--fg'), muted: cssVar('--muted'), line: cssVar('--line'),
+    accent: cssVar('--accent'), accent2: cssVar('--accent2'), good: cssVar('--good'), bad: cssVar('--bad'), star: cssVar('--star') };
+}
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'html') el.innerHTML = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of children.flat(Infinity)) {
+    if (c == null || c === false) continue;
+    el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  return el;
+}
+function fitText(ctx, text, maxW, basePx, dpr) {
+  let px = basePx; ctx.font = `${px * dpr}px ${cssVar('--font-mono')}`;
+  while (ctx.measureText(text).width > maxW && px > 8.5) { px -= 0.5; ctx.font = `${px * dpr}px ${cssVar('--font-mono')}`; }
+  if (ctx.measureText(text).width > maxW) { while (text.length > 8 && ctx.measureText(text + '…').width > maxW) text = text.slice(0, -1); text += '…'; }
+  return text;
+}
+let toastTimer = 0;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+function seeded(seed) { let s = (seed >>> 0) || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function withAlpha(color, a) {
+  // color is a hex like #rrggbb (our tokens); fall back to the color itself otherwise
+  const m = /^#([0-9a-f]{6})$/i.exec(color);
+  if (!m) return color;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+/* ------------------------------------------------------------------ audio */
+const Audio = (() => {
+  let ctx = null, master, comp, musicBus, sfxBus, noiseBuf, musicFilter;
+  let musicOn = true, sfxOn = true, lastTick = 0;
+  const music = { running: false, timer: 0, nextTime: 0, beat: 0, bpm: 64, brightness: 2, lead: null };
+  const ROOT = 130.81; // C3
+  const semi = (n) => ROOT * Math.pow(2, n / 12);
+  // C Lydian: C D E F# G A B. Chords as semitone offsets from C.
+  const CHORDS = [[0, 4, 7, 11], [2, 6, 9, 14], [4, 7, 11, 14], [7, 11, 14, 18]];
+  const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19];
+  function init() {
+    if (ctx) return true;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      ctx = new AC();
+      master = ctx.createGain(); master.gain.value = 0.45;
+      comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -18; comp.knee.value = 20; comp.ratio.value = 6; comp.attack.value = 0.01; comp.release.value = 0.25;
+      musicBus = ctx.createGain(); musicBus.gain.value = musicOn ? 0.25 : 0;
+      sfxBus = ctx.createGain(); sfxBus.gain.value = sfxOn ? 0.6 : 0;
+      musicFilter = ctx.createBiquadFilter(); musicFilter.type = 'lowpass'; musicFilter.frequency.value = 1800; musicFilter.Q.value = 0.4;
+      musicFilter.connect(musicBus); musicBus.connect(comp); sfxBus.connect(comp); comp.connect(master); master.connect(ctx.destination);
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      return true;
+    } catch (e) { ctx = null; return false; }
+  }
+  function resume() { if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {}); }
+  function padNote(freq, t, dur, partials, vol) {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 1.2);
+    g.gain.setValueAtTime(vol, t + dur - 2.0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g.connect(musicFilter);
+    for (let k = 1; k <= partials; k++) {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.value = freq * k + (Math.random() - 0.5) * 0.7;
+      const pg = ctx.createGain(); pg.gain.value = 1 / Math.pow(k, 1.6);
+      o.connect(pg); pg.connect(g); o.start(t); o.stop(t + dur + 0.05);
+    }
+  }
+  function blipAt(freq, t, dur, { type = 'sine', vol = 0.2, partials = 2, slide = 0, dest = null } = {}) {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g.connect(dest || sfxBus);
+    for (let k = 1; k <= partials; k++) {
+      const o = ctx.createOscillator(); o.type = type;
+      o.frequency.setValueAtTime(freq * k, t);
+      if (slide) o.frequency.exponentialRampToValueAtTime((freq + slide) * k, t + dur);
+      const pg = ctx.createGain(); pg.gain.value = 1 / (k * k);
+      o.connect(pg); pg.connect(g); o.start(t); o.stop(t + dur + 0.02);
+    }
+  }
+  function schedule() {
+    if (!ctx) return;
+    const lookahead = 0.12;
+    while (music.nextTime < ctx.currentTime + lookahead) {
+      const beatLen = 60 / music.bpm;
+      const b = music.beat, t = music.nextTime;
+      if (b % 8 === 0) {
+        const bar = Math.floor(b / 8);
+        const chord = CHORDS[bar % CHORDS.length];
+        const voices = chord.slice(0, 3 + (bar % 2));
+        const partials = 1 + Math.round(music.brightness);
+        voices.forEach((s, i) => padNote(semi(s + (i === 0 ? -12 : 0) + (Math.floor(bar / 4) % 2 ? 0 : 0)), t, beatLen * 8, partials, 0.085));
+      }
+      if (b % 8 !== 0 && Math.random() < 0.28) {
+        const note = PENTA[Math.floor(Math.random() * PENTA.length)];
+        blipAt(semi(note + 24), t + (Math.random() < 0.3 ? beatLen / 2 : 0), 0.55, { vol: 0.05, partials: 2, dest: musicFilter });
+      }
+      music.nextTime += beatLen; music.beat++;
+    }
+  }
+  function startMusic() {
+    if (!ctx || music.running || !musicOn) return;
+    music.running = true; music.nextTime = ctx.currentTime + 0.05;
+    music.timer = setInterval(schedule, 25);
+  }
+  function stopMusic() { clearInterval(music.timer); music.running = false; }
+  function setMusic(on) {
+    musicOn = on;
+    if (ctx) { musicBus.gain.setTargetAtTime(on ? 0.25 : 0, ctx.currentTime, 0.1); }
+    if (on) startMusic(); else stopMusic();
+  }
+  function setSfx(on) { sfxOn = on; if (ctx) sfxBus.gain.setTargetAtTime(on ? 0.6 : 0, ctx.currentTime, 0.05); }
+  function leadStart() {
+    if (!ctx || music.lead) return;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2500;
+    const g = ctx.createGain(); g.gain.value = 0; lp.connect(g); g.connect(musicBus);
+    const oscs = [], gains = [];
+    for (let n = 1; n <= 8; n++) {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 220 * n;
+      const og = ctx.createGain(); og.gain.value = 0; o.connect(og); og.connect(lp); o.start();
+      oscs.push(o); gains.push(og);
+    }
+    music.lead = { oscs, gains, g, lp };
+    g.gain.setTargetAtTime(0.6, ctx.currentTime, 0.15);
+  }
+  function leadSet(coefs) {
+    if (!ctx || !music.lead) return;
+    const norm = Math.sqrt(coefs.reduce((s, c) => s + c * c, 0));
+    const scale = 0.28 / Math.max(norm, 1);
+    const t = ctx.currentTime;
+    coefs.forEach((c, i) => music.lead.gains[i].gain.setTargetAtTime(c * scale, t, 0.03));
+  }
+  function leadStop() {
+    if (!ctx || !music.lead) return;
+    const L = music.lead; music.lead = null;
+    L.g.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
+    setTimeout(() => L.oscs.forEach((o) => { try { o.stop(); } catch (e) {} }), 500);
+  }
+  function sfx(name) {
+    if (!ctx || !sfxOn) return;
+    const t = ctx.currentTime;
+    try {
+      switch (name) {
+        case 'click': blipAt(880, t, 0.06, { vol: 0.16 }); break;
+        case 'hover': blipAt(1320, t, 0.03, { vol: 0.035, partials: 1 }); break;
+        case 'good': blipAt(440, t, 0.14, { vol: 0.2 }); blipAt(660, t + 0.09, 0.24, { vol: 0.2 }); break;
+        case 'bad': [300, 318].forEach((f) => {
+          const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+          const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.13, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+          o.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 0.22);
+        }); break;
+        case 'tick': { const now = performance.now(); if (now - lastTick < 50) return; lastTick = now; blipAt(1500, t, 0.025, { vol: 0.07, partials: 1 }); break; }
+        case 'whoosh': {
+          const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+          const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.2;
+          bp.frequency.setValueAtTime(400, t); bp.frequency.exponentialRampToValueAtTime(2400, t + 0.35);
+          const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+          src.connect(bp); bp.connect(g); g.connect(sfxBus); src.start(t); src.stop(t + 0.4); break;
+        }
+        case 'fanfare': [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+          blipAt(f, t + i * 0.12, 0.55, { vol: 0.18, partials: 3 });
+          blipAt(f * 1.004, t + i * 0.12 + 0.012, 0.55, { vol: 0.07, partials: 2 });
+        }); break;
+        case 'unlock': blipAt(660, t, 0.12, { vol: 0.16 }); blipAt(990, t + 0.1, 0.2, { vol: 0.16 }); break;
+        case 'star': blipAt(1760, t, 0.3, { vol: 0.14, partials: 3, slide: 140 }); break;
+      }
+    } catch (e) { /* audio is optional */ }
+  }
+  return { init, resume, setMusic, setSfx, sfx, startMusic, stopMusic, leadStart, leadSet, leadStop,
+    setBrightness(b) { music.brightness = clamp(b, 1, 5); },
+    get ready() { return !!ctx; }, get musicOn() { return musicOn; }, get sfxOn() { return sfxOn; } };
+})();
+
+/* ------------------------------------------------------------------ state */
+const LEVEL_COUNT = 7;
+const state = { screen: 'title', level: 0, score: 0, streak: 0, stars: Array(LEVEL_COUNT).fill(0), done: Array(LEVEL_COUNT).fill(false), music: true, sfx: true, sound: false };
+const KEY = 'needle-and-wave-v1';
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify({ score: state.score, stars: state.stars, done: state.done, music: state.music, sfx: state.sfx })); } catch (e) {}
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (s && typeof s === 'object') {
+      state.score = s.score | 0;
+      if (Array.isArray(s.stars) && s.stars.length === LEVEL_COUNT) state.stars = s.stars.map((x) => x | 0);
+      if (Array.isArray(s.done) && s.done.length === LEVEL_COUNT) state.done = s.done.map(Boolean);
+      state.music = s.music !== false; state.sfx = s.sfx !== false;
+    }
+  } catch (e) {}
+}
+function resetProgress() {
+  state.score = 0; state.streak = 0; state.stars = Array(LEVEL_COUNT).fill(0); state.done = Array(LEVEL_COUNT).fill(false);
+  try { localStorage.removeItem(KEY); } catch (e) {}
+  renderMap(); toast('Progress reset');
+}
+
+/* ------------------------------------------------------------------ shell */
+function showScreen(name) {
+  state.screen = name;
+  for (const s of ['title', 'map', 'level']) $('screen-' + s).hidden = (s !== name);
+  window.scrollTo({ top: 0 });
+  if (name === 'title') heroLoop(); 
+}
+function updateHud() {
+  $('hud-score').textContent = state.score; $('hud-streak').textContent = state.streak; $('map-score').textContent = state.score;
+  $('hud-music').setAttribute('aria-pressed', String(state.music)); $('hud-music').classList.toggle('active', state.music);
+  $('hud-sfx').setAttribute('aria-pressed', String(state.sfx)); $('hud-sfx').classList.toggle('active', state.sfx);
+  $('map-music').textContent = 'Music: ' + (state.music ? 'on' : 'off');
+  $('map-sfx').textContent = 'SFX: ' + (state.sfx ? 'on' : 'off');
+}
+function ensureAudio() { if (!Audio.ready) { if (Audio.init()) { state.sound = true; Audio.setMusic(state.music); Audio.setSfx(state.sfx); } } Audio.resume(); }
+function toggleMusic() { ensureAudio(); state.music = !state.music; Audio.setMusic(state.music); save(); updateHud(); }
+function toggleSfx() { ensureAudio(); state.sfx = !state.sfx; Audio.setSfx(state.sfx); save(); updateHud(); Audio.sfx('click'); }
+function starsText(n) { return '★'.repeat(n) + '☆'.repeat(3 - n); }
+
+function renderMap() {
+  const path = $('path'); path.innerHTML = '';
+  let doneCount = 0;
+  LEVELS.forEach((L, i) => {
+    const unlocked = i === 0 || state.done[i - 1];
+    if (state.done[i]) doneCount++;
+    const node = h('button', { class: 'node' + (unlocked ? '' : ' locked') + (i === 6 ? ' boss' : ''), onclick: () => { Audio.sfx(unlocked ? 'click' : 'unlock'); startLevel(i); } },
+      h('div', { class: 'idx' }, i === 6 ? 'VII' : ['I', 'II', 'III', 'IV', 'V', 'VI'][i]),
+      h('div', {}, h('div', { class: 'name' }, L.title), h('div', { class: 'sub' }, unlocked ? L.subtitle : 'Locked. Tap to skip ahead anyway.')),
+      h('div', { class: 'stars', 'aria-label': `${state.stars[i]} of 3 stars` }, starsText(state.stars[i])));
+    path.append(node);
+  });
+  $('map-progress').style.width = (doneCount / LEVEL_COUNT * 100) + '%';
+  $('title-progress').textContent = doneCount ? `${doneCount} of 7 levels complete. Progress is saved in this browser.` : 'About 25 minutes. Progress is saved in this browser.';
+  updateHud();
+}
+
+/* ---- level runner ---- */
+let current = null, rafId = 0, lastT = 0, boardDpr = 1;
+const particles = [];
+function spawnParticles(canvas) {
+  const n = reducedMotion ? 0 : 90; const p = palette();
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * TAU, sp = (0.25 + Math.random() * 0.6) * canvas.height;
+    particles.push({ x: canvas.width / 2, y: canvas.height / 2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - canvas.height * 0.3, life: 1.2 + Math.random() * 0.6, size: 3 + Math.random() * 5, color: [p.accent, p.accent2, p.star, p.good][i % 4] });
+  }
+}
+function drawParticles(ctx, dt) {
+  const g = ctx.canvas.height * 1.4;
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const q = particles[i]; q.life -= dt; if (q.life <= 0) { particles.splice(i, 1); continue; }
+    q.vy += g * dt; q.x += q.vx * dt; q.y += q.vy * dt;
+    ctx.globalAlpha = clamp(q.life, 0, 1); ctx.fillStyle = q.color; ctx.fillRect(q.x, q.y, q.size * boardDpr, q.size * boardDpr);
+  }
+  ctx.globalAlpha = 1;
+}
+function setStatus(html) { $('card-status').innerHTML = html; }
+function resizeBoard() {
+  const canvas = $('board'); const wrap = canvas.parentElement;
+  const w = Math.max(200, wrap.clientWidth);
+  const aspect = (current && current.aspect) || 1.5;
+  const hcss = Math.round(w / aspect);
+  boardDpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.style.height = hcss + 'px';
+  canvas.width = Math.round(w * boardDpr); canvas.height = Math.round(hcss * boardDpr);
+  if (current && current.resize) current.resize(canvas.width, canvas.height, boardDpr);
+  if (current && current.draw) current.draw(0);
+}
+function loop(t) {
+  if (state.screen !== 'level' || !current) return;
+  const dt = Math.min(0.05, ((t - lastT) / 1000) || 0.016); lastT = t;
+  if (current.draw) current.draw(dt);
+  if (particles.length) drawParticles($('board').getContext('2d'), dt);
+  rafId = requestAnimationFrame(loop);
+}
+function startLevel(i) {
+  if (current && current.destroy) current.destroy();
+  current = null; particles.length = 0;
+  state.level = i; const L = LEVELS[i];
+  showScreen('level');
+  $('hud-eyebrow').textContent = i === 6 ? 'Boss level' : `Level ${i + 1} of 7`;
+  $('hud-title').textContent = L.title;
+  $('card-idea').innerHTML = L.idea; $('card-goal').innerHTML = L.goal; $('card-deeper').innerHTML = L.deeper;
+  $('card-details').open = false;
+  $('hud-timer-wrap').hidden = true;
+  $('controls').innerHTML = ''; $('overlay').innerHTML = '';
+  setStatus('');
+  $('btn-finish').textContent = i === 6 ? 'Finish: six-question check' : 'Finish level: quick check';
+  current = L.create({ canvas: $('board'), controls: $('controls'), overlay: $('overlay'), setStatus });
+  resizeBoard(); updateHud();
+  Audio.setBrightness(2 + Math.min(3, state.streak));
+  cancelAnimationFrame(rafId); lastT = performance.now(); rafId = requestAnimationFrame(loop);
+}
+function attachPointer(canvas, hs) {
+  const pos = (e) => { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * canvas.width / r.width, y: (e.clientY - r.top) * canvas.height / r.height, e }; };
+  let down = false;
+  const onDown = (e) => { if (e.button != null && e.button !== 0) return; down = true; canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); hs.down && hs.down(pos(e)); e.preventDefault(); };
+  const onMove = (e) => { const p = pos(e); if (down) hs.drag && hs.drag(p); else hs.move && hs.move(p); };
+  const onUp = (e) => { if (!down) return; down = false; hs.up && hs.up(pos(e)); };
+  canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerup', onUp); canvas.addEventListener('pointercancel', onUp);
+  return () => { canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp); };
+}
+class Raster {
+  constructor(n) { this.n = n; this.c = document.createElement('canvas'); this.c.width = this.c.height = n; this.g = this.c.getContext('2d', { willReadFrequently: true }); }
+  clear() { this.g.clearRect(0, 0, this.n, this.n); }
+  count() { const d = this.g.getImageData(0, 0, this.n, this.n).data; let c = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 40) c++; return c; }
+}
+function makeSlider({ id, label, min, max, step, value, format = (v) => String(v), oninput }) {
+  const out = h('span', { class: 'val' }, format(value));
+  const input = h('input', { type: 'range', id, min, max, step, value });
+  input.addEventListener('input', () => { out.textContent = format(+input.value); oninput && oninput(+input.value); });
+  const wrap = h('div', { class: 'slider' }, h('label', { for: id }, h('span', {}, label), out), input);
+  wrap.input = input; wrap.set = (v) => { input.value = v; out.textContent = format(+v); }; wrap.get = () => +input.value;
+  return wrap;
+}
+function makeMeter(label, warm) {
+  const val = h('div', { class: 'val' }, '–'); const bar = h('div');
+  const m = h('div', { class: 'meter' + (warm ? ' warm' : '') }, h('div', { class: 'lbl' }, label), val, h('div', { class: 'bar' }, bar));
+  m.set = (text, frac) => { val.textContent = text; bar.style.width = (clamp(frac, 0, 1) * 100).toFixed(1) + '%'; };
+  return m;
+}
+function btn(label, onclick, cls = '') { return h('button', { class: cls, onclick: (e) => { Audio.sfx('click'); onclick(e); } }, label); }
+function chip(text, cls = '') { return h('span', { class: 'chip ' + cls }, text); }
+
+/* ---- quiz + results ---- */
+function closeModal() { $('modal-root').innerHTML = ''; }
+function shuffleIdx(n) { const a = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function runQuiz(L, stars) {
+  const qs = L.quiz; let i = 0, correct = 0;
+  const root = $('modal-root'); root.innerHTML = '';
+  const modal = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' });
+  root.append(h('div', { class: 'modal-back' }, modal));
+  function show() {
+    const q = qs[i]; modal.innerHTML = '';
+    modal.append(h('div', { class: 'eyebrow' }, `Quick check ${i + 1} of ${qs.length}`), h('h3', {}, q.q));
+    const opts = h('div', { class: 'options' }); const explain = h('div', { class: 'explain', hidden: true });
+    const next = h('button', { class: 'primary', hidden: true, onclick: () => { Audio.sfx('click'); i++; if (i < qs.length) show(); else finishLevel(stars, correct, qs.length); } }, i === qs.length - 1 ? 'See results' : 'Next question');
+    let answered = false;
+    const perm = shuffleIdx(q.a.length);
+    perm.forEach((orig, k) => {
+      const txt = q.a[orig];
+      opts.append(h('button', { onclick: () => {
+        if (answered) return; answered = true;
+        const ok = orig === q.c;
+        [...opts.children].forEach((bb, j) => { if (perm[j] === q.c) bb.classList.add('correct'); else if (j === k) bb.classList.add('wrong'); });
+        explain.textContent = q.e; explain.hidden = false; next.hidden = false;
+        if (ok) { correct++; state.score += 100; state.streak++; Audio.sfx('good'); } else { state.streak = 0; Audio.sfx('bad'); }
+        Audio.setBrightness(2 + Math.min(3, state.streak)); updateHud(); next.focus();
+      } }, txt));
+    });
+    modal.append(opts, explain, h('div', { class: 'row' }, next));
+  }
+  show();
+}
+function finishLevel(stars, correct, total) {
+  const i = state.level, L = LEVELS[i];
+  const prev = state.stars[i];
+  state.stars[i] = Math.max(prev, stars); state.done[i] = true;
+  state.score += 50 * stars; save(); updateHud();
+  Audio.sfx('fanfare'); spawnParticles($('board'));
+  const root = $('modal-root'); root.innerHTML = '';
+  const modal = h('div', { class: 'modal' + (i === 6 ? ' wide recap' : '') });
+  root.append(h('div', { class: 'modal-back' }, modal));
+  modal.append(h('div', { class: 'eyebrow' }, i === 6 ? 'Boss cleared' : `Level ${i + 1} complete`), h('h2', {}, L.title),
+    h('div', { class: 'big-stars', 'aria-label': `${stars} of 3 stars` }, starsText(stars)),
+    h('p', {}, `Quick check: ${correct} of ${total} correct. Level stars: ${stars} of 3. Score ${state.score}.`));
+  if (i === 6) {
+    modal.append(h('h3', {}, 'What you now understand'), h('ul', {}, ...RECAP.map((t) => h('li', { html: t }))),
+      h('h3', {}, 'Where the frontier is'), h('div', { class: 'frontier' }, ...FRONTIER.map((t) => h('p', { html: t }))));
+  }
+  const row = h('div', { class: 'row' });
+  row.append(btn('Back to map', () => { closeModal(); renderMap(); showScreen('map'); }));
+  if (i < 6) row.append(btn('Next level', () => { closeModal(); startLevel(i + 1); }, 'primary'));
+  else row.append(btn('Play again from the map', () => { closeModal(); renderMap(); showScreen('map'); }, 'primary'));
+  modal.append(row);
+  setTimeout(() => { for (let k = 0; k < stars; k++) setTimeout(() => Audio.sfx('star'), 200 * k); }, 400);
+}
+
+/* ---- notes drawer ---- */
+function openNotes(tab = 'notes') {
+  const root = $('drawer-root'); root.innerHTML = '';
+  const back = h('div', { class: 'drawer-back', onclick: () => closeNotes() });
+  const drawer = h('div', { class: 'drawer', role: 'dialog', 'aria-label': 'Field notes' });
+  const body = h('div');
+  const tabs = h('div', { class: 'tabs' });
+  const close = h('button', { class: 'small', onclick: () => closeNotes() }, 'Close');
+  function render(which) {
+    body.innerHTML = '';
+    [...tabs.children].forEach((b) => b.classList.toggle('active', b.dataset.tab === which));
+    if (which === 'notes') {
+      const dl = h('dl', { class: 'gloss' });
+      GLOSSARY.forEach(([term, def]) => dl.append(h('dt', {}, term), h('dd', { html: def })));
+      body.append(h('p', { class: 'footer-note' }, 'College-level definitions, kept short. Tap Deeper inside a level for the longer story.'), dl);
+    } else {
+      body.append(h('p', { class: 'footer-note' }, 'Primary sources behind the levels. The chain of implications is laid out in the first one.'),
+        h('ol', { class: 'sources' }, ...SOURCES.map((s) => h('li', { html: s }))));
+    }
+  }
+  ['notes', 'sources'].forEach((t) => tabs.append(h('button', { class: 'small', 'data-tab': t, onclick: () => { Audio.sfx('click'); render(t); } }, t === 'notes' ? 'Field notes' : 'Sources')));
+  drawer.append(h('div', { class: 'row', style: 'display:flex;justify-content:space-between;align-items:center;gap:8px' }, h('h2', {}, 'Field notes'), close), tabs, body);
+  root.append(back, drawer); render(tab);
+  const esc = (e) => { if (e.key === 'Escape') closeNotes(); };
+  document.addEventListener('keydown', esc); root._esc = esc; close.focus();
+}
+function closeNotes() { const root = $('drawer-root'); if (root._esc) document.removeEventListener('keydown', root._esc); root.innerHTML = ''; }
+
+/* ================================================================== LEVEL 1: Build a wave */
+function level1({ canvas, controls, setStatus }) {
+  const ctx = canvas.getContext('2d');
+  const N = 512;
+  const xs = Float64Array.from({ length: N }, (_, i) => TAU * i / N);
+  const wrapPi = (x) => ((x + Math.PI) % TAU + TAU) % TAU - Math.PI;
+  const TARGETS = [
+    { key: 'square', name: 'Square', jump: true, f: (x) => (Math.sin(x) >= 0 ? 1 : -1) * Math.PI / 4, jumpSize: Math.PI / 2, top: Math.PI / 4 },
+    { key: 'saw', name: 'Sawtooth', jump: true, f: (x) => wrapPi(x) / 2, jumpSize: Math.PI, top: Math.PI / 2 },
+    { key: 'tri', name: 'Triangle', jump: false, f: (x) => Math.PI / 4 * Math.asin(Math.sin(x)) },
+    { key: 'mystery', name: 'Mystery', jump: false, f: null },
+  ];
+  const L = { aspect: 1.5, best: { square: 0, saw: 0, tri: 0, mystery: 0 }, p: new Array(8).fill(0), target: TARGETS[0], hear: true, hint: false, mysteryCoefs: null, samples: null, proj: null };
+  const rnd = seeded(Date.now() & 0xffff);
+  function newMystery() {
+    const ns = [1, 2, 3, 4, 5, 6, 7, 8].sort(() => rnd() - 0.5).slice(0, 3);
+    const c = new Array(8).fill(0);
+    ns.forEach((n) => { c[n - 1] = Math.round(((rnd() < 0.5 ? -1 : 1) * (0.3 + 0.7 * rnd())) * 20) / 20; });
+    L.mysteryCoefs = c;
+  }
+  newMystery();
+  function targetFn(x) { if (L.target.key === 'mystery') { let s = 0; for (let n = 1; n <= 8; n++) s += L.mysteryCoefs[n - 1] * Math.sin(n * x); return s; } return L.target.f(x); }
+  function recompute() {
+    L.samples = Float64Array.from(xs, targetFn);
+    const b = new Array(8).fill(0);
+    for (let n = 1; n <= 8; n++) { let s = 0; for (let i = 0; i < N; i++) s += L.samples[i] * Math.sin(n * xs[i]); b[n - 1] = 2 * s / N; }
+    L.proj = b;
+  }
+  function playerSum(x) { let s = 0; for (let n = 1; n <= 8; n++) s += L.p[n - 1] * Math.sin(n * x); return s; }
+  function match() {
+    let num = 0, den = 0;
+    for (let n = 0; n < 8; n++) { num += (L.p[n] - L.proj[n]) ** 2; den += L.proj[n] ** 2; }
+    return clamp(1 - Math.sqrt(num) / Math.max(Math.sqrt(den), 1e-9), 0, 1);
+  }
+  function levelStars() {
+    const avg = (L.best.square + L.best.saw + L.best.tri) / 3;
+    return avg >= 0.95 ? 3 : avg >= 0.85 ? 2 : avg >= 0.7 ? 1 : 0;
+  }
+  const sliders = [];
+  const matchMeter = makeMeter('Match with this target');
+  const bestMeter = makeMeter('Best so far (this target)', true);
+  function update(fromUser) {
+    const m = match();
+    if (m > L.best[L.target.key]) { L.best[L.target.key] = m; }
+    matchMeter.set(fmt(m, 3), m); bestMeter.set(fmt(L.best[L.target.key], 3), L.best[L.target.key]);
+    if (fromUser && L.hear) Audio.leadSet(L.p);
+    if (fromUser) Audio.sfx('tick');
+    setStatus(`Best: Square <b>${fmt(L.best.square, 2)}</b> · Saw <b>${fmt(L.best.saw, 2)}</b> · Tri <b>${fmt(L.best.tri, 2)}</b> · Mystery <b>${fmt(L.best.mystery, 2)}</b><br>Level stars now: <b>${starsText(levelStars())}</b> (average of the three named targets: 0.70 / 0.85 / 0.95)`);
+  }
+  const tabRow = h('div', { class: 'row' });
+  const tabBtns = TARGETS.map((T) => btn(T.name, () => { L.target = T; recompute(); tabBtns.forEach((b, i) => b.classList.toggle('active', TARGETS[i] === T)); newBtn.hidden = T.key !== 'mystery'; update(false); }, 'small' + (T === L.target ? ' active' : '')));
+  const newBtn = btn('New mystery', () => { newMystery(); recompute(); update(false); }, 'small'); newBtn.hidden = true;
+  tabRow.append(h('span', { class: 'eyebrow' }, 'Target'), ...tabBtns, newBtn);
+  const grid = h('div', { class: 'harmonics' });
+  for (let n = 1; n <= 8; n++) {
+    const s = makeSlider({ id: 'h' + n, label: `n = ${n}`, min: -1, max: 1, step: 0.01, value: 0, format: (v) => (v >= 0 ? '+' : '') + v.toFixed(2), oninput: (v) => { L.p[n - 1] = v; update(true); } });
+    sliders.push(s); grid.append(s);
+  }
+  const hearBtn = btn('Hear it: on', () => { L.hear = !L.hear; hearBtn.textContent = 'Hear it: ' + (L.hear ? 'on' : 'off'); hearBtn.classList.toggle('active', L.hear); if (L.hear) { Audio.leadStart(); Audio.leadSet(L.p); } else Audio.leadStop(); }, 'small active');
+  const hintBtn = btn('Show best coefficients', () => { L.hint = !L.hint; hintBtn.classList.toggle('active', L.hint); hintBtn.textContent = L.hint ? 'Hide best coefficients' : 'Show best coefficients'; }, 'small');
+  const resetBtn = btn('Reset harmonics', () => { L.p.fill(0); sliders.forEach((s) => s.set(0)); update(true); }, 'small');
+  controls.append(tabRow, grid, h('div', { class: 'row' }, hearBtn, hintBtn, resetBtn, h('span', { class: 'kbd-hint' }, 'Tip: focus a slider and use the arrow keys for fine control.')), h('div', { class: 'meters' }, matchMeter, bestMeter));
+  recompute(); update(false);
+  if (Audio.ready && L.hear) { Audio.leadStart(); Audio.leadSet(L.p); }
+  L.draw = () => {
+    const W = canvas.width, H = canvas.height, P = palette(), dpr = boardDpr;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    const plotH = H * 0.68, pad = 18 * dpr;
+    const ys = [], yt = []; let maxA = 1.2;
+    for (let i = 0; i < N; i++) { const a = playerSum(xs[i]), b = L.samples[i]; ys.push(a); yt.push(b); maxA = Math.max(maxA, Math.abs(a), Math.abs(b)); }
+    const yScale = (plotH / 2 - pad) / (maxA * 1.08), ymid = plotH / 2;
+    const X = (i) => pad + (W - 2 * pad) * i / (N - 1);
+    // axes
+    ctx.strokeStyle = P.line; ctx.lineWidth = 1 * dpr; ctx.beginPath(); ctx.moveTo(pad, ymid); ctx.lineTo(W - pad, ymid); ctx.stroke();
+    ctx.setLineDash([4 * dpr, 6 * dpr]); ctx.beginPath(); for (let q = 1; q < 4; q++) { const x = pad + (W - 2 * pad) * q / 4; ctx.moveTo(x, pad); ctx.lineTo(x, plotH - pad); } ctx.stroke(); ctx.setLineDash([]);
+    // target
+    ctx.strokeStyle = P.accent2; ctx.lineWidth = 2 * dpr; ctx.setLineDash([8 * dpr, 6 * dpr]); ctx.beginPath();
+    for (let i = 0; i < N; i++) { const x = X(i), y = ymid - yt[i] * yScale; if (i === 0 || Math.abs(yt[i] - yt[i - 1]) > maxA) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    ctx.stroke(); ctx.setLineDash([]);
+    // player
+    ctx.strokeStyle = P.accent; ctx.lineWidth = 2.5 * dpr; ctx.beginPath();
+    for (let i = 0; i < N; i++) { const x = X(i), y = ymid - ys[i] * yScale; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    ctx.stroke();
+    ctx.font = `${12 * dpr}px ${cssVar('--font-mono')}`; ctx.fillStyle = P.muted; ctx.textAlign = 'left';
+    ctx.fillText('target (dashed) and your sum, over one period', pad, plotH - 6 * dpr);
+    // Gibbs marker
+    const m = match();
+    if (L.target.jump && m >= 0.8) {
+      let imax = 0; for (let i = 1; i < N / 2; i++) if (ys[i] > ys[imax]) imax = i;
+      const over = (ys[imax] - L.target.top) / L.target.jumpSize;
+      if (over > 0.01) {
+        const x = X(imax), y = ymid - ys[imax] * yScale;
+        ctx.fillStyle = P.accent2; ctx.beginPath(); ctx.arc(x, y, 4 * dpr, 0, TAU); ctx.fill();
+        ctx.fillStyle = P.fg; ctx.font = `${12 * dpr}px ${cssVar('--font-body')}`;
+        ctx.fillText(`Gibbs overshoot: +${(over * 100).toFixed(0)}% of the jump`, Math.min(x + 8 * dpr, W - 230 * dpr), Math.max(y - 8 * dpr, 16 * dpr));
+      }
+    }
+    // bars
+    const by0 = plotH + 8 * dpr, bh = H - by0 - 22 * dpr, bw = (W - 2 * pad) / 8, mid = by0 + bh / 2;
+    ctx.strokeStyle = P.line; ctx.beginPath(); ctx.moveTo(pad, mid); ctx.lineTo(W - pad, mid); ctx.stroke();
+    for (let n = 0; n < 8; n++) {
+      const x = pad + bw * n + bw * 0.25, w = bw * 0.5;
+      ctx.fillStyle = withAlpha(P.accent, 0.85); const hgt = L.p[n] * (bh / 2);
+      ctx.fillRect(x, mid - Math.max(0, hgt), w, Math.abs(hgt));
+      if (L.hint) { const hg = L.proj[n] * (bh / 2); ctx.strokeStyle = P.accent2; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(x - 4 * dpr, mid - hg); ctx.lineTo(x + w + 4 * dpr, mid - hg); ctx.stroke(); }
+      ctx.fillStyle = P.muted; ctx.font = `${11 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'center'; ctx.fillText('n=' + (n + 1), x + w / 2, H - 6 * dpr);
+    }
+  };
+  L.stars = levelStars;
+  L.destroy = () => { Audio.leadStop(); };
+  L.debug = { setCoefs(c) { L.p = c.slice(); sliders.forEach((s, i) => s.set(c[i])); update(true); }, proj: () => L.proj.slice(), best: L.best };
+  return L;
+}
+
+/* ================================================================== LEVEL 2: The uncertainty gate */
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+    if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -TAU / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k, b = a + len / 2;
+        const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+      }
+    }
+  }
+}
+function level2({ canvas, controls, overlay, setStatus }) {
+  const ctx = canvas.getContext('2d');
+  const N = 512, SR = 512, FMAX = 160;
+  const ROUNDS = [
+    { Wt: 0.32, Wf: 24, tc: 0.50, fc: 60, possible: true, label: 'Round 1: a roomy pair of gates' },
+    { Wt: 0.13, Wf: 12.5, tc: 0.42, fc: 80, possible: true, label: 'Round 2: tight on both sides' },
+    { Wt: 0.08, Wf: 10, tc: 0.60, fc: 50, possible: false, label: 'Round 3: look before you squeeze' },
+  ];
+  const L = { aspect: 1.5, round: 0, sigma: 0.05, t0: 0.5, f0: 60, solved: [null, null, null], lockFails: 0, re: new Float64Array(N), im: new Float64Array(N), spec: new Float64Array(N / 2 + 1) };
+  const R = () => ROUNDS[L.round];
+  const stE = () => L.sigma / Math.SQRT2;              // energy-density std in time
+  const sfE = () => 1 / (4 * Math.PI * stE());          // energy-density std in frequency (Gaussian: product = 1/(4π))
+  function signal(i) { const t = i / SR; return Math.exp(-((t - L.t0) ** 2) / (2 * L.sigma ** 2)) * Math.cos(TAU * L.f0 * t); }
+  function recompute() {
+    for (let i = 0; i < N; i++) { L.re[i] = signal(i); L.im[i] = 0; }
+    fft(L.re, L.im);
+    for (let k = 0; k <= N / 2; k++) L.spec[k] = L.re[k] ** 2 + L.im[k] ** 2;
+    // measured one-sided energy centroid and std, for display
+    let E = 0, m1 = 0, m2 = 0; for (let k = 1; k <= N / 2; k++) { E += L.spec[k]; m1 += k * L.spec[k]; m2 += k * k * L.spec[k]; }
+    const mean = m1 / E; L.measF = { mean, std: Math.sqrt(Math.max(0, m2 / E - mean * mean)) };
+  }
+  function fitsT() { return Math.abs(L.t0 - R().tc) + 2 * stE() <= R().Wt / 2; }
+  function fitsF() { return Math.abs(L.f0 - R().fc) + 2 * sfE() <= R().Wf / 2; }
+  const sSigma = makeSlider({ id: 'sigma', label: 'Envelope width σ (s)', min: 0.008, max: 0.16, step: 0.001, value: L.sigma, format: (v) => v.toFixed(3), oninput: (v) => { L.sigma = v; refresh(true); } });
+  const sT0 = makeSlider({ id: 't0', label: 'Packet center t₀ (s)', min: 0.1, max: 0.9, step: 0.005, value: L.t0, format: (v) => v.toFixed(3), oninput: (v) => { L.t0 = v; refresh(true); } });
+  const sF0 = makeSlider({ id: 'f0', label: 'Carrier frequency f₀ (Hz)', min: 40, max: 120, step: 0.5, value: L.f0, format: (v) => v.toFixed(1), oninput: (v) => { L.f0 = v; refresh(true); } });
+  const mT = makeMeter('Time extent (±2σ of energy), s'); const mF = makeMeter('Frequency extent (±2σ of energy), Hz', true); const mP = makeMeter('Gate product W_t · W_f vs minimum 4/π');
+  const msg = h('div', { class: 'explain' }, ROUNDS[0].label);
+  const lockBtn = btn('It fits: lock it in', () => {
+    if (L.solved[L.round] !== null) return;
+    if (fitsT() && fitsF()) { resolve(true, 'Locked. Both gates satisfied, and the product rule allowed it.'); }
+    else { L.lockFails++; Audio.sfx('bad'); msg.textContent = (!R().possible && L.lockFails >= 2) ? 'Still outside. Compare the gate product with 4/π ≈ 1.273 before squeezing further.' : 'Not inside both gates yet. Narrowing σ shrinks the time extent but widens the frequency extent.'; }
+  }, 'primary');
+  const impBtn = btn('Impossible', () => {
+    if (L.solved[L.round] !== null) return;
+    if (!R().possible) resolve(true, 'Right. W_t·W_f = ' + (R().Wt * R().Wf).toFixed(2) + ' is below 4/π ≈ 1.27, so no Gaussian packet fits both gates.');
+    else resolve(false, 'Not impossible. W_t·W_f = ' + (R().Wt * R().Wf).toFixed(2) + ' exceeds 4/π ≈ 1.27, so a packet of the right σ fits. Next round.');
+  });
+  const nextBtn = btn('Next round', () => { if (L.round < 2) { L.round++; L.lockFails = 0; msg.textContent = R().label; nextBtn.hidden = true; refresh(false); } }, 'small'); nextBtn.hidden = true;
+  function resolve(ok, text) {
+    L.solved[L.round] = ok; msg.textContent = text; Audio.sfx(ok ? 'good' : 'bad');
+    if (ok) { state.score += 50; state.streak++; } else state.streak = 0; updateHud();
+    if (L.round < 2) nextBtn.hidden = false; else msg.textContent += ' All rounds done. Finish the level when ready.';
+    refresh(false);
+  }
+  controls.append(h('div', { class: 'grid' }, sSigma, sT0, sF0), h('div', { class: 'row' }, lockBtn, impBtn, nextBtn), msg, h('div', { class: 'meters' }, mT, mF, mP));
+  function refresh(user) {
+    recompute();
+    const ft = fitsT(), ff = fitsF();
+    mT.set(fmt(4 * stE(), 3) + (ft ? ' · inside' : ' · outside'), (4 * stE()) / R().Wt);
+    mF.set(fmt(4 * sfE(), 2) + (ff ? ' · inside' : ' · outside'), (4 * sfE()) / R().Wf);
+    const prod = R().Wt * R().Wf; mP.set(prod.toFixed(2) + ' vs 1.27', 1.27 / prod);
+    if (user) Audio.sfx('tick');
+    const stars = L.solved.filter(Boolean).length;
+    setStatus(`Rounds solved: <b>${stars} of 3</b>. Each correct call is a star. Gaussian widths multiply to exactly 1/(4π): σ_t·σ_f = ${(stE() * sfE()).toFixed(4)}.`);
+    overlay.innerHTML = ''; overlay.append(chip(R().label, 'accent'));
+  }
+  refresh(false);
+  L.draw = () => {
+    const W = canvas.width, H = canvas.height, P = palette(), dpr = boardDpr, pad = 18 * dpr;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    const r = R(); const ft = fitsT(), ff = fitsF();
+    // time panel
+    const th = H * 0.5, tmid = th / 2;
+    const TX = (t) => pad + (W - 2 * pad) * t;
+    ctx.fillStyle = withAlpha(ft ? P.good : P.accent2, 0.14); ctx.fillRect(TX(r.tc - r.Wt / 2), pad, TX(r.tc + r.Wt / 2) - TX(r.tc - r.Wt / 2), th - 2 * pad);
+    ctx.strokeStyle = ft ? P.good : P.accent2; ctx.lineWidth = 2 * dpr; ctx.strokeRect(TX(r.tc - r.Wt / 2), pad, TX(r.tc + r.Wt / 2) - TX(r.tc - r.Wt / 2), th - 2 * pad);
+    ctx.strokeStyle = P.line; ctx.lineWidth = 1 * dpr; ctx.beginPath(); ctx.moveTo(pad, tmid); ctx.lineTo(W - pad, tmid); ctx.stroke();
+    ctx.strokeStyle = P.accent; ctx.lineWidth = 1.6 * dpr; ctx.beginPath();
+    for (let i = 0; i < N; i++) { const x = TX(i / N), y = tmid - signal(i) * (th / 2 - pad) * 0.95; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    ctx.stroke();
+    // extent bracket (time)
+    const e0 = TX(L.t0 - 2 * stE()), e1 = TX(L.t0 + 2 * stE()); ctx.strokeStyle = P.fg; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(e0, th - pad - 6 * dpr); ctx.lineTo(e0, th - pad + 2 * dpr); ctx.lineTo(e1, th - pad + 2 * dpr); ctx.lineTo(e1, th - pad - 6 * dpr); ctx.stroke();
+    ctx.fillStyle = P.muted; ctx.font = `${12 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'left';
+    ctx.textAlign = 'right'; ctx.fillText(fitText(ctx, `time (0 to 1 s) · gate ${r.Wt.toFixed(2)} s wide at ${r.tc.toFixed(2)} s`, W * 0.5, 12, dpr), W - pad - 4 * dpr, th - pad - 8 * dpr); ctx.textAlign = 'left';
+    // frequency panel
+    const fy0 = th + pad, fh = H - fy0 - pad, base = fy0 + fh;
+    const FX = (f) => pad + (W - 2 * pad) * f / FMAX;
+    ctx.fillStyle = withAlpha(ff ? P.good : P.accent2, 0.14); ctx.fillRect(FX(r.fc - r.Wf / 2), fy0, FX(r.fc + r.Wf / 2) - FX(r.fc - r.Wf / 2), fh);
+    ctx.strokeStyle = ff ? P.good : P.accent2; ctx.lineWidth = 2 * dpr; ctx.strokeRect(FX(r.fc - r.Wf / 2), fy0, FX(r.fc + r.Wf / 2) - FX(r.fc - r.Wf / 2), fh);
+    let smax = 1e-12; for (let k = 0; k <= FMAX; k++) smax = Math.max(smax, L.spec[k]);
+    ctx.fillStyle = withAlpha(P.accent, 0.75); ctx.beginPath(); ctx.moveTo(FX(0), base);
+    for (let k = 0; k <= FMAX; k++) ctx.lineTo(FX(k), base - (L.spec[k] / smax) * (fh - 14 * dpr));
+    ctx.lineTo(FX(FMAX), base); ctx.closePath(); ctx.fill();
+    const g0 = FX(L.f0 - 2 * sfE()), g1 = FX(L.f0 + 2 * sfE()); ctx.strokeStyle = P.fg; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(g0, base - 6 * dpr); ctx.lineTo(g0, base + 2 * dpr); ctx.lineTo(g1, base + 2 * dpr); ctx.lineTo(g1, base - 6 * dpr); ctx.stroke();
+    ctx.fillStyle = P.muted; ctx.textAlign = 'left'; ctx.fillText(fitText(ctx, `energy spectrum |ĝ(f)|² (0 to ${FMAX} Hz) · gate ${r.Wf} Hz wide at ${r.fc} Hz · measured centroid ${L.measF.mean.toFixed(1)} Hz`, W - 2 * pad, 12, dpr), pad, fy0 - 5 * dpr);
+  };
+  L.stars = () => L.solved.filter(Boolean).length;
+  L.debug = { set(sig, t0, f0) { L.sigma = sig; L.t0 = t0; L.f0 = f0; sSigma.set(sig); sT0.set(t0); sF0.set(f0); refresh(false); }, lock: () => lockBtn.click(), impossible: () => impBtn.click(), next: () => nextBtn.click(), fits: () => fitsT() && fitsF() };
+  return L;
+}
+
+/* ================================================================== LEVEL 3: Turn the needle */
+function level3({ canvas, controls, overlay, setStatus }) {
+  const ctx = canvas.getContext('2d');
+  const RN = 640, WORLD = 3.2, PPU = RN / WORLD, AREA_PX = (WORLD / RN) ** 2;
+  const raster = new Raster(RN);
+  const L = { aspect: 1.35, phase: 'A',
+    needle: { cx: 0, cy: 0, th: 0 }, mode: 'center', turned: 0, completedArea: null, badges: { turn: false, disk: false, deltoid: false },
+    demo: null, drag: null,
+    k: 3, s: [0.6, 0.6, 0.6], bestRatio: Infinity, lastRatio: null };
+  const toR = (x, y) => [(x + WORLD / 2) * PPU, (WORLD / 2 - y) * PPU];
+  function paintSegment(a, b) { const g = raster.g; g.strokeStyle = cssVar('--accent'); g.lineWidth = 2; g.lineCap = 'round'; g.beginPath(); const [x1, y1] = toR(a[0], a[1]), [x2, y2] = toR(b[0], b[1]); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+  function ends(nd) { const dx = Math.cos(nd.th) / 2, dy = Math.sin(nd.th) / 2; return [[nd.cx - dx, nd.cy - dy], [nd.cx + dx, nd.cy + dy]]; }
+  function sweepTo(next) {
+    const cur = L.needle; const dth = next.th - cur.th, dx = next.cx - cur.cx, dy = next.cy - cur.cy;
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dth) / 0.006, Math.hypot(dx, dy) / 0.004)));
+    for (let i = 1; i <= steps; i++) { const t = i / steps; const e = ends({ cx: cur.cx + dx * t, cy: cur.cy + dy * t, th: cur.th + dth * t }); paintSegment(e[0], e[1]); }
+    L.turned += Math.abs(dth); L.needle = next; L.areaDirty = true;
+  }
+  let areaCache = 0; L.areaDirty = true;
+  function sweptArea() { if (L.areaDirty) { areaCache = raster.count() * AREA_PX; L.areaDirty = false; } return areaCache; }
+  function resetNeedle() { raster.clear(); L.needle = { cx: 0, cy: 0, th: 0 }; L.turned = 0; L.completedArea = null; L.areaDirty = true; refreshA(); }
+  // ---- Phase A controls
+  const modeBtns = {};
+  const modeRow = h('div', { class: 'row' }, h('span', { class: 'eyebrow' }, 'Move'));
+  [['center', 'Spin about the midpoint'], ['end', 'Spin about an end'], ['slide', 'Slide (translate)']].forEach(([m, label]) => {
+    const b = btn(label, () => { L.mode = m; Object.values(modeBtns).forEach((x) => x.classList.remove('active')); b.classList.add('active'); }, 'small' + (m === L.mode ? ' active' : ''));
+    modeBtns[m] = b; modeRow.append(b);
+  });
+  const demoBtn = btn('Watch the deltoid trick (π/8)', () => startDemo(), 'small');
+  const resetA = btn('Reset needle', () => { resetNeedle(); }, 'small');
+  const mArea = makeMeter('Swept area so far (needle length 1)', true); const mTurn = makeMeter('Rotation completed');
+  const badgeBox = h('div', { class: 'reflist' });
+  const phaseBtn = btn('Go to Phase B: the Perron tree', () => setPhase('B'), 'primary');
+  const panelA = h('div', { class: 'controls' }, modeRow, h('div', { class: 'row' }, demoBtn, resetA, phaseBtn), h('div', { class: 'meters' }, mArea, mTurn), badgeBox);
+  // ---- Phase B controls
+  const kSlider = makeSlider({ id: 'kpieces', label: 'Cuts k (pieces = 2^k)', min: 1, max: 6, step: 1, value: L.k, format: (v) => `${v} → ${2 ** v} pieces`, oninput: (v) => { L.k = v; while (L.s.length < v) L.s.push(0.6); L.s.length = v; buildStageSliders(); refreshB(true); } });
+  const stageBox = h('div', { class: 'grid' });
+  function buildStageSliders() {
+    stageBox.innerHTML = '';
+    for (let j = 0; j < L.k; j++) stageBox.append(makeSlider({ id: 'stage' + j, label: `Stage ${j + 1} slide (groups of ${2 ** (j + 1)})`, min: 0, max: 1, step: 0.02, value: L.s[j], format: (v) => v.toFixed(2), oninput: (v) => { L.s[j] = v; refreshB(true); } }));
+  }
+  const mRatio = makeMeter('Union area ÷ original triangle', true); const mBest = makeMeter('Best ratio this level');
+  const autoBtn = btn('Auto-tune the slides', () => { autoTune(); }, 'small');
+  const resetB = btn('Reset slides', () => { L.s = L.s.map(() => 0); buildStageSliders(); refreshB(true); }, 'small');
+  const backBtn = btn('Back to Phase A', () => setPhase('A'), 'small ghost');
+  const panelB = h('div', { class: 'controls' }, kSlider, stageBox, h('div', { class: 'row' }, autoBtn, resetB, backBtn), h('div', { class: 'meters' }, mRatio, mBest));
+  controls.append(panelA, panelB);
+  // ---- Perron tree geometry
+  const B = 2 * Math.tan(Math.PI / 6), TRI_AREA = B / 2;
+  function pieces() {
+    const M = 2 ** L.k, w0 = B / M, out = [];
+    for (let i = 0; i < M; i++) {
+      let d = 0;
+      for (let j = 1; j <= L.k; j++) { const wj = w0 * 2 ** (j - 1); const right = (Math.floor(i / 2 ** (j - 1)) % 2) === 1; d += L.s[j - 1] * (wj / 2) * (right ? -1 : 1); }
+      const x0 = -B / 2 + i * w0;
+      out.push([[d, 1], [x0 + d, 0], [x0 + w0 + d, 0]]);
+    }
+    return out;
+  }
+  function unionRatio(ps) {
+    raster.clear(); const g = raster.g; g.fillStyle = '#000';
+    for (const p of ps) { g.beginPath(); const [a, b, c] = p.map((v) => toR(v[0], v[1] - 0.5)); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(c[0], c[1]); g.closePath(); g.fill(); }
+    return raster.count() * AREA_PX / TRI_AREA;
+  }
+  function autoTune() {
+    if (L.tuning) return;
+    L.tuning = true; autoBtn.disabled = true; const t0 = performance.now();
+    const sweeps = []; for (let pass = 0; pass < 2; pass++) for (let j = 0; j < L.k; j++) sweeps.push(j);
+    const stepSweep = () => {
+      if (!sweeps.length || L.phase !== 'B') { L.tuning = false; autoBtn.disabled = false; buildStageSliders(); refreshB(true); Audio.sfx('whoosh'); toast(`Tuned ${L.k} stages in ${Math.round(performance.now() - t0)} ms`); return; }
+      const j = sweeps.shift();
+      let bestV = L.s[j], bestR = unionRatio(pieces());
+      for (let v = 0; v <= 1.0001; v += 0.05) { L.s[j] = v; const r = unionRatio(pieces()); if (r < bestR - 1e-6) { bestR = r; bestV = v; } }
+      L.s[j] = bestV; buildStageSliders(); refreshB(false); Audio.sfx('tick');
+      requestAnimationFrame(stepSweep);
+    };
+    requestAnimationFrame(stepSweep);
+  }
+  function starsNow() {
+    let s = 0;
+    if (L.badges.turn || L.bestRatio < 0.45) s = 1;
+    if (L.bestRatio < 0.40) s = 2;
+    if (L.bestRatio < 0.35) s = 3;
+    return s;
+  }
+  function refreshA() {
+    const a = sweptArea();
+    mArea.set(fmt(a, 3), a / 1.6); mTurn.set(`${Math.min(180, L.turned * 180 / Math.PI).toFixed(0)}° of 180°`, L.turned / Math.PI);
+    badgeBox.innerHTML = '';
+    [['Complete a half turn (any area)', L.badges.turn], ['Match the disk: finish with area ≤ 0.83 (midpoint pivot sweeps π/4 ≈ 0.785; measured to about ±0.03)', L.badges.disk], ['Watch the deltoid achieve π/8 ≈ 0.393', L.badges.deltoid]].forEach(([t, ok]) => badgeBox.append(h('div', { class: ok ? 'hit' : '' }, (ok ? '✓ ' : '· ') + t)));
+    overlay.innerHTML = ''; overlay.append(chip('Phase A: rigid moves', 'accent'), chip(`area ${fmt(a, 3)}`, 'accent2'), chip(`refs: end π/2 · mid π/4 · deltoid π/8`));
+    setStatus(`Phase A badges: <b>${Object.values(L.badges).filter(Boolean).length} of 3</b>. Stars come from Phase B: best ratio <b>${Number.isFinite(L.bestRatio) ? L.bestRatio.toFixed(3) : '–'}</b> · thresholds 0.45 / 0.40 / 0.35 · now <b>${starsText(starsNow())}</b>`);
+  }
+  function refreshB(user) {
+    const ps = pieces(); L.currentPieces = ps; const r = unionRatio(ps); L.lastRatio = r;
+    const improved = r < L.bestRatio; if (improved) L.bestRatio = r;
+    mRatio.set(r.toFixed(3), 1 - r); mBest.set(Number.isFinite(L.bestRatio) ? L.bestRatio.toFixed(3) : '–', 1 - Math.min(1, L.bestRatio));
+    if (user) Audio.sfx(improved && r < 0.35 ? 'good' : 'tick');
+    overlay.innerHTML = ''; overlay.append(chip('Phase B: Perron tree', 'accent'), chip(`${2 ** L.k} pieces · ratio ${r.toFixed(3)}`, 'accent2'), chip('every piece still holds a unit segment in its directions'));
+    setStatus(`Best ratio <b>${L.bestRatio.toFixed(3)}</b> · stars at 0.45 / 0.40 / 0.35 · now <b>${starsText(starsNow())}</b><br>Union area ${(r * TRI_AREA).toFixed(3)} of the triangle's ${TRI_AREA.toFixed(3)}.`);
+    L.areaDirty = true;
+  }
+  function setPhase(p) {
+    L.phase = p; panelA.hidden = p !== 'A'; panelB.hidden = p !== 'B';
+    if (p === 'A') { raster.clear(); L.areaDirty = true; L.needle = { cx: 0, cy: 0, th: 0 }; L.turned = 0; refreshA(); }
+    else { buildStageSliders(); refreshB(false); }
+    Audio.sfx('whoosh');
+  }
+  // ---- deltoid demo: chord of constant length between P(-t/2) and P(π - t/2), a = 1/4 gives length 1
+  const A = 0.25;
+  const Pd = (t) => [2 * A * Math.cos(t) + A * Math.cos(2 * t), 2 * A * Math.sin(t) - A * Math.sin(2 * t)];
+  function startDemo() { if (L.demo) return; raster.clear(); L.areaDirty = true; L.turned = 0; L.demo = { t: 0, dur: 6 }; Audio.sfx('whoosh'); }
+  function stepDemo(dt) {
+    const d = L.demo; d.t += dt; const u = Math.min(1, d.t / d.dur) * TAU;
+    const steps = 40; const prevU = Math.max(0, u - dt / d.dur * TAU);
+    for (let i = 1; i <= steps; i++) { const uu = prevU + (u - prevU) * i / steps; paintSegment(Pd(-uu / 2), Pd(Math.PI - uu / 2)); }
+    const e0 = Pd(-u / 2), e1 = Pd(Math.PI - u / 2);
+    L.needle = { cx: (e0[0] + e1[0]) / 2, cy: (e0[1] + e1[1]) / 2, th: Math.atan2(e1[1] - e0[1], e1[0] - e0[0]) };
+    L.turned = u / 2; L.areaDirty = true;
+    if (d.t >= d.dur) { L.demo = null; L.badges.deltoid = true; L.completedArea = sweptArea(); Audio.sfx('good'); state.score += 25; updateHud(); toast(`Deltoid: swept ${fmt(sweptArea(), 3)} ≈ π/8`); }
+    refreshA();
+  }
+  // ---- pointer (Phase A)
+  const toWorld = (p) => { const s = WORLD / Math.min(canvas.width, canvas.height); return [(p.x - canvas.width / 2) * s, (canvas.height / 2 - p.y) * s]; };
+  const detach = attachPointer(canvas, {
+    down(p) { if (L.phase !== 'A' || L.demo) return; const w = toWorld(p); const nd = L.needle; const e = ends(nd);
+      const pivot = L.mode === 'center' ? [nd.cx, nd.cy] : e[0];
+      L.drag = { pivot, lastAng: Math.atan2(w[1] - pivot[1], w[0] - pivot[0]), last: w }; },
+    drag(p) { if (!L.drag || L.phase !== 'A') return; const w = toWorld(p); const d = L.drag; const nd = L.needle;
+      if (L.mode === 'slide') { sweepTo({ cx: clamp(nd.cx + w[0] - d.last[0], -1.5, 1.5), cy: clamp(nd.cy + w[1] - d.last[1], -1.5, 1.5), th: nd.th }); d.last = w; }
+      else { const ang = Math.atan2(w[1] - d.pivot[1], w[0] - d.pivot[0]); let da = ang - d.lastAng; if (da > Math.PI) da -= TAU; if (da < -Math.PI) da += TAU; d.lastAng = ang;
+        const th = nd.th + da; const r = L.mode === 'center' ? 0 : 0.5; const cx = d.pivot[0] + r * Math.cos(th), cy = d.pivot[1] + r * Math.sin(th);
+        sweepTo({ cx, cy, th }); }
+      Audio.sfx('tick'); checkTurn(); refreshA(); },
+    up() { L.drag = null; },
+  });
+  function checkTurn() {
+    if (L.turned >= Math.PI && L.completedArea === null) { L.completedArea = sweptArea(); L.badges.turn = true; if (L.completedArea <= 0.83) { L.badges.disk = true; state.score += 50; } state.score += 50; state.streak++; updateHud(); Audio.sfx('good'); toast(`Half turn complete: swept ${fmt(L.completedArea, 3)}`); }
+  }
+  canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Needle board. Left and right arrows rotate, up and down slide along the needle.');
+  const onKey = (e) => {
+    if (L.phase !== 'A' || L.demo) return; const nd = L.needle; let handled = true;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      const da = (e.key === 'ArrowLeft' ? 1 : -1) * Math.PI / 90;
+      if (L.mode === 'slide') sweepTo({ cx: nd.cx, cy: nd.cy, th: nd.th + da });
+      else { const pivot = L.mode === 'center' ? [nd.cx, nd.cy] : ends(nd)[0]; const th = nd.th + da; const r = L.mode === 'center' ? 0 : 0.5; sweepTo({ cx: pivot[0] + r * Math.cos(th), cy: pivot[1] + r * Math.sin(th), th }); }
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      const sgn = (e.key === 'ArrowUp' ? 1 : -1) * 0.03;
+      sweepTo({ cx: clamp(nd.cx + sgn * Math.cos(nd.th), -1.5, 1.5), cy: clamp(nd.cy + sgn * Math.sin(nd.th), -1.5, 1.5), th: nd.th });
+    } else handled = false;
+    if (handled) { e.preventDefault(); Audio.sfx('tick'); checkTurn(); refreshA(); }
+  };
+  canvas.addEventListener('keydown', onKey);
+  // ---- draw
+  L.draw = (dt) => {
+    const W = canvas.width, H = canvas.height, P = palette(), dpr = boardDpr;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    const side = Math.min(W, H), ox = (W - side) / 2, oy = (H - side) / 2;
+    const S = side / WORLD; const px = (x, y) => [ox + (x + WORLD / 2) * S, oy + (WORLD / 2 - y) * S];
+    if (L.demo) stepDemo(dt);
+    // faint grid
+    ctx.strokeStyle = withAlpha(P.fg, 0.07); ctx.lineWidth = 1 * dpr; ctx.beginPath();
+    for (let v = -1.5; v <= 1.5; v += 0.5) { const [x0, y0] = px(v, -1.6), [x1, y1] = px(v, 1.6); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); const [a0, b0] = px(-1.6, v), [a1, b1] = px(1.6, v); ctx.moveTo(a0, b0); ctx.lineTo(a1, b1); } ctx.stroke();
+    if (L.phase === 'A') {
+      ctx.globalAlpha = 0.55; ctx.drawImage(raster.c, ox, oy, side, side); ctx.globalAlpha = 1;
+      if (L.demo) { ctx.strokeStyle = withAlpha(P.fg, 0.4); ctx.setLineDash([4 * dpr, 4 * dpr]); ctx.beginPath(); for (let i = 0; i <= 200; i++) { const q = Pd(TAU * i / 200), [x, y] = px(q[0], q[1]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.stroke(); ctx.setLineDash([]); }
+      const e = ends(L.needle); const [x1, y1] = px(e[0][0], e[0][1]), [x2, y2] = px(e[1][0], e[1][1]);
+      ctx.strokeStyle = P.accent2; ctx.lineWidth = 5 * dpr; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.fillStyle = P.fg; const pv = L.mode === 'center' ? [L.needle.cx, L.needle.cy] : e[0]; const [pxv, pyv] = px(pv[0], pv[1]);
+      if (!L.demo && L.mode !== 'slide') { ctx.beginPath(); ctx.arc(pxv, pyv, 5 * dpr, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = P.muted; ctx.font = `${12 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'center';
+      ctx.fillText(fitText(ctx, L.demo ? 'the needle stays tangent to the deltoid while it turns' : 'drag the amber needle · unit length · the teal region is everything it has swept', W - 20 * dpr, 12, dpr), W / 2, H - 8 * dpr);
+    } else {
+      const ps = L.currentPieces || pieces();
+      const sh = (x, y) => px(x, y - 0.5);
+      ctx.setLineDash([5 * dpr, 5 * dpr]); ctx.strokeStyle = withAlpha(P.fg, 0.35); ctx.lineWidth = 1.2 * dpr; ctx.beginPath();
+      const a0 = sh(0, 1), b0 = sh(-B / 2, 0), c0 = sh(B / 2, 0); ctx.moveTo(a0[0], a0[1]); ctx.lineTo(b0[0], b0[1]); ctx.lineTo(c0[0], c0[1]); ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = withAlpha(P.accent2, 0.28); ctx.strokeStyle = withAlpha(P.accent2, 0.7); ctx.lineWidth = 1 * dpr;
+      for (const p of ps) { ctx.beginPath(); const [a, b, c] = p.map((v) => sh(v[0], v[1])); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      ctx.fillStyle = P.muted; ctx.font = `${12 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'center';
+      ctx.fillText(fitText(ctx, 'dashed: the original triangle, height 1 · amber: its pieces after sliding · darker where they overlap', W - 20 * dpr, 12, dpr), W / 2, H - 8 * dpr);
+    }
+  };
+  L.stars = starsNow;
+  L.destroy = () => { detach(); canvas.removeEventListener('keydown', onKey); canvas.tabIndex = -1; };
+  setPhase('A');
+  L.debug = { setPhase, setK(k) { L.k = k; L.s.length = 0; for (let j = 0; j < k; j++) L.s.push(0.6); kSlider.set(k); buildStageSliders(); refreshB(false); }, setS(s) { L.s = s.slice(); buildStageSliders(); refreshB(false); return L.lastRatio; }, autoTune, ratio: () => L.lastRatio, best: () => L.bestRatio, demo: startDemo, finishDemo() { if (L.demo) { const n = 240; for (let i = 0; i < n; i++) stepDemo(L.demo ? L.demo.dur / n : 0); } }, tuning: () => L.tuning, sweptArea, sweepTo, needle: () => L.needle, pieces };
+  return L;
+}
+
+/* ================================================================== LEVEL 4: Measure the dust */
+function perronPieces(k, s) {
+  const B = 2 * Math.tan(Math.PI / 6), M = 2 ** k, w0 = B / M, out = [];
+  for (let i = 0; i < M; i++) {
+    let d = 0;
+    for (let j = 1; j <= k; j++) { const wj = w0 * 2 ** (j - 1); const right = (Math.floor(i / 2 ** (j - 1)) % 2) === 1; d += s[j - 1] * (wj / 2) * (right ? -1 : 1); }
+    const x0 = -B / 2 + i * w0; out.push([[d, 1], [x0 + d, 0], [x0 + w0 + d, 0]]);
+  }
+  return out;
+}
+function level4({ canvas, controls, overlay, setStatus }) {
+  const ctx = canvas.getContext('2d');
+  const RN = 512, raster = new Raster(RN), SIZES = [128, 64, 32, 16, 8];
+  function koch(g) {
+    g.strokeStyle = '#000'; g.lineWidth = 1.2; g.beginPath();
+    const pts = [[16, 330], [496, 330]];
+    function rec(a, b, d) {
+      if (d === 0) { g.lineTo(b[0], b[1]); return; }
+      const dx = (b[0] - a[0]) / 3, dy = (b[1] - a[1]) / 3;
+      const p1 = [a[0] + dx, a[1] + dy], p3 = [a[0] + 2 * dx, a[1] + 2 * dy];
+      const ang = Math.atan2(dy, dx) - Math.PI / 3, len = Math.hypot(dx, dy);
+      const p2 = [p1[0] + Math.cos(ang) * len, p1[1] + Math.sin(ang) * len];
+      rec(a, p1, d - 1); rec(p1, p2, d - 1); rec(p2, p3, d - 1); rec(p3, b, d - 1);
+    }
+    g.moveTo(pts[0][0], pts[0][1]); rec(pts[0], pts[1], 5); g.stroke();
+  }
+  function sierp(g) {
+    g.fillStyle = '#000';
+    function rec(a, b, c, d) {
+      if (d === 0) { g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(c[0], c[1]); g.closePath(); g.fill(); return; }
+      const ab = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], bc = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2], ca = [(c[0] + a[0]) / 2, (c[1] + a[1]) / 2];
+      rec(a, ab, ca, d - 1); rec(ab, b, bc, d - 1); rec(ca, bc, c, d - 1);
+    }
+    rec([0, 512], [512, 512], [0, 0], 6);
+  }
+  const perronParams = { k: 5, s: [0.5, 0.5, 0.5, 0.5, 0.5] };
+  function perron(g) {
+    g.fillStyle = '#000';
+    const ps = perronPieces(perronParams.k, perronParams.s);
+    const S = 400, ox = 256, oy = 470;
+    for (const p of ps) { g.beginPath(); g.moveTo(ox + p[0][0] * S, oy - p[0][1] * S); g.lineTo(ox + p[1][0] * S, oy - p[1][1] * S); g.lineTo(ox + p[2][0] * S, oy - p[2][1] * S); g.closePath(); g.fill(); }
+  }
+  const SHAPES = [
+    { key: 'segment', name: 'Line segment', dim: 1, draw: (g) => { g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(128, 260); g.lineTo(448, 260); g.stroke(); } },
+    { key: 'square', name: 'Filled square', dim: 2, draw: (g) => { g.fillStyle = '#000'; g.fillRect(128, 128, 256, 256); } },
+    { key: 'koch', name: 'Koch curve', dim: Math.log(4) / Math.log(3), draw: koch },
+    { key: 'sierpinski', name: 'Sierpinski triangle', dim: Math.log(3) / Math.log(2), draw: sierp },
+    { key: 'perron', name: 'Perron tree', dim: 2, draw: perron },
+  ];
+  const L = { aspect: 1.6, shape: SHAPES[0], epsIdx: 2, slope: 1.5, locked: {}, lockedLs: {}, bits: null, counts: [], };
+  function rasterize() {
+    raster.clear(); L.shape.draw(raster.g);
+    const d = raster.g.getImageData(0, 0, RN, RN).data; const bits = new Uint8Array(RN * RN);
+    for (let i = 0; i < RN * RN; i++) bits[i] = d[i * 4 + 3] > 40 ? 1 : 0;
+    L.bits = bits;
+    L.counts = SIZES.map((s) => { let n = 0; for (let by = 0; by < RN; by += s) for (let bx = 0; bx < RN; bx += s) { let hit = 0; for (let y = by; y < by + s && !hit; y++) { const row = y * RN; for (let x = bx; x < bx + s; x++) if (bits[row + x]) { hit = 1; break; } } n += hit; } return n; });
+  }
+  const pts = () => SIZES.map((s, i) => [Math.log2(RN / s), Math.log2(Math.max(1, L.counts[i]))]);
+  function lsSlope() { const p = pts(); const mx = p.reduce((a, q) => a + q[0], 0) / p.length, my = p.reduce((a, q) => a + q[1], 0) / p.length; let num = 0, den = 0; for (const [x, y] of p) { num += (x - mx) * (y - my); den += (x - mx) ** 2; } return num / den; }
+  function intercept(slope) { const p = pts(); const mx = p.reduce((a, q) => a + q[0], 0) / p.length, my = p.reduce((a, q) => a + q[1], 0) / p.length; return my - slope * mx; }
+  const tabRow = h('div', { class: 'row' }, h('span', { class: 'eyebrow' }, 'Shape'));
+  const tabBtns = SHAPES.map((S) => btn(S.name, () => { L.shape = S; rasterize(); refreshTabs(); refresh(false); }, 'small'));
+  tabRow.append(...tabBtns);
+  function refreshTabs() { tabBtns.forEach((b, i) => { const S = SHAPES[i]; b.classList.toggle('active', S === L.shape); b.textContent = S.name + (L.locked[S.key] != null ? ` ✓ ${L.locked[S.key].toFixed(2)}` : ''); }); }
+  const sEps = makeSlider({ id: 'eps', label: 'Box side ε (pixels of 512)', min: 0, max: 4, step: 1, value: L.epsIdx, format: (v) => `${SIZES[v]} px  (ε = 1/${RN / SIZES[v]})`, oninput: (v) => { L.epsIdx = v; refresh(true); } });
+  const sSlope = makeSlider({ id: 'slope', label: 'Your slope guess (the dimension)', min: 0.5, max: 2.2, step: 0.01, value: L.slope, format: (v) => v.toFixed(2), oninput: (v) => { L.slope = v; refresh(true); } });
+  const mN = makeMeter('Boxes hit N(ε)'); const mFit = makeMeter('Least-squares slope (revealed after lock-in)', true);
+  const lockBtn = btn('Lock in this slope', () => {
+    if (L.locked[L.shape.key] != null) { toast('Already locked for this shape'); return; }
+    const ls = lsSlope(); const err = Math.abs(L.slope - ls); L.locked[L.shape.key] = L.slope; L.lockedLs[L.shape.key] = ls;
+    const ok = err < 0.15; Audio.sfx(ok ? 'good' : 'bad'); if (ok) { state.score += 50; state.streak++; } else state.streak = 0; updateHud();
+    toast(`Plot slope ${ls.toFixed(2)} · textbook dimension ${L.shape.dim.toFixed(3)} · your guess ${L.slope.toFixed(2)}, off by ${err.toFixed(2)}`);
+    refreshTabs(); refresh(false);
+  }, 'primary');
+  controls.append(tabRow, h('div', { class: 'grid' }, sEps, sSlope), h('div', { class: 'row' }, lockBtn, h('span', { class: 'kbd-hint' }, 'Lock all five shapes. Stars depend on how closely your slope matches the plotted points; the textbook value is revealed after each lock.')), h('div', { class: 'meters' }, mN, mFit));
+  function avgErr() { const ks = Object.keys(L.locked); if (!ks.length) return null; return ks.reduce((a, k) => a + Math.abs(L.locked[k] - L.lockedLs[k]), 0) / ks.length; }
+  function starsNow() { const n = Object.keys(L.locked).length, e = avgErr(); if (n < 5 || e == null) return n >= 3 && e != null && e < 0.3 ? 1 : 0; return e < 0.08 ? 3 : e < 0.15 ? 2 : e < 0.3 ? 1 : 0; }
+  function refresh(user) {
+    mN.set(String(L.counts[L.epsIdx]), Math.log2(L.counts[L.epsIdx] + 1) / 12);
+    const locked = L.locked[L.shape.key] != null; mFit.set(locked ? lsSlope().toFixed(3) + ` · textbook ${L.shape.dim.toFixed(3)}` : 'locked shapes only', locked ? lsSlope() / 2.2 : 0);
+    if (user) Audio.sfx('tick');
+    const e = avgErr();
+    setStatus(`Locked <b>${Object.keys(L.locked).length} of 5</b> shapes · average error <b>${e == null ? '–' : e.toFixed(3)}</b> · stars at 0.30 / 0.15 / 0.08 · now <b>${starsText(starsNow())}</b>`);
+    overlay.innerHTML = ''; overlay.append(chip(L.shape.name, 'accent'), chip(`N(ε) = ${L.counts[L.epsIdx]} at ε = ${SIZES[L.epsIdx]}/512`, 'accent2'));
+  }
+  rasterize(); refreshTabs(); refresh(false);
+  L.draw = () => {
+    const W = canvas.width, H = canvas.height, P = palette(), dpr = boardDpr, pad = 14 * dpr;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    const side = Math.min(W * 0.5 - 2 * pad, H - 2 * pad), ox = pad, oy = (H - side) / 2;
+    // shape (tinted)
+    ctx.save(); ctx.beginPath(); ctx.rect(ox, oy, side, side); ctx.clip();
+    ctx.fillStyle = P.card; ctx.fillRect(ox, oy, side, side);
+    ctx.drawImage(raster.c, ox, oy, side, side);
+    // tint black pixels to accent via composite: draw accent rect with 'source-atop' over the shape layer only
+    ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = P.accent; ctx.fillRect(ox, oy, side, side); ctx.globalCompositeOperation = 'source-over';
+    // boxes
+    const s = SIZES[L.epsIdx], cell = side * s / RN; ctx.strokeStyle = withAlpha(P.fg, 0.18); ctx.lineWidth = 1 * dpr; ctx.beginPath();
+    for (let x = 0; x <= RN; x += s) { ctx.moveTo(ox + x * side / RN, oy); ctx.lineTo(ox + x * side / RN, oy + side); ctx.moveTo(ox, oy + x * side / RN); ctx.lineTo(ox + side, oy + x * side / RN); } ctx.stroke();
+    ctx.fillStyle = withAlpha(P.accent2, 0.22);
+    for (let by = 0; by < RN; by += s) for (let bx = 0; bx < RN; bx += s) { let hit = 0; for (let y = by; y < by + s && !hit; y += 2) { const row = y * RN; for (let x = bx; x < bx + s; x += 2) if (L.bits[row + x]) { hit = 1; break; } } if (hit) ctx.fillRect(ox + bx * side / RN, oy + by * side / RN, cell, cell); }
+    ctx.restore(); ctx.strokeStyle = P.line; ctx.strokeRect(ox, oy, side, side);
+    // plot
+    const px0 = W * 0.5 + pad, pw = W - px0 - pad, py0 = pad + 10 * dpr, ph = H - 2 * pad - 24 * dpr;
+    const X = (v) => px0 + 30 * dpr + (pw - 40 * dpr) * (v - 1.5) / 5.5, Y = (v) => py0 + ph - ph * v / 13;
+    ctx.strokeStyle = P.line; ctx.beginPath(); ctx.moveTo(X(1.5), Y(0)); ctx.lineTo(X(7), Y(0)); ctx.moveTo(X(1.5), Y(0)); ctx.lineTo(X(1.5), Y(13)); ctx.stroke();
+    ctx.fillStyle = P.muted; ctx.font = `${11 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'center';
+    for (let v = 2; v <= 6; v++) ctx.fillText(String(v), X(v), Y(0) + 14 * dpr);
+    ctx.fillText('log₂(1/ε)', X(4.25), Y(0) + 26 * dpr);
+    ctx.save(); ctx.translate(px0 + 4 * dpr, Y(6.5)); ctx.rotate(-Math.PI / 2); ctx.fillText('log₂ N(ε)', 0, 0); ctx.restore();
+    const b = intercept(L.slope); ctx.strokeStyle = P.accent2; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(X(1.5), Y(L.slope * 1.5 + b)); ctx.lineTo(X(7), Y(L.slope * 7 + b)); ctx.stroke();
+    if (L.locked[L.shape.key] != null) { const ls = lsSlope(), bb = intercept(ls); ctx.strokeStyle = P.good; ctx.setLineDash([5 * dpr, 4 * dpr]); ctx.beginPath(); ctx.moveTo(X(1.5), Y(ls * 1.5 + bb)); ctx.lineTo(X(7), Y(ls * 7 + bb)); ctx.stroke(); ctx.setLineDash([]); }
+    pts().forEach(([x, y], i) => { ctx.fillStyle = i === L.epsIdx ? P.accent2 : P.accent; ctx.beginPath(); ctx.arc(X(x), Y(y), (i === L.epsIdx ? 6 : 4) * dpr, 0, TAU); ctx.fill(); });
+    ctx.fillStyle = P.fg; ctx.textAlign = 'left'; ctx.font = `${12 * dpr}px ${cssVar('--font-body')}`;
+    ctx.fillText(`slope ${L.slope.toFixed(2)}  (dimension guess)`, X(1.5) + 6 * dpr, py0 + 4 * dpr);
+  };
+  L.stars = starsNow;
+  L.debug = { lockAll(exact) { SHAPES.forEach((S) => { L.shape = S; rasterize(); L.slope = exact ? lsSlope() : lsSlope() + 0.1; lockBtn.click(); }); }, counts: () => L.counts.slice(), ls: lsSlope, shape: (k) => { L.shape = SHAPES.find((s) => s.key === k); rasterize(); refresh(false); },
+    customPerron(k, sv) { perronParams.k = k; perronParams.s = sv; L.shape = SHAPES[4]; rasterize(); refresh(false); return { counts: L.counts.slice(), ls: lsSlope() }; } };
+  return L;
+}
+
+/* ================================================================== LEVEL 5: Pack the tubes */
+function level5({ canvas, controls, overlay, setStatus }) {
+  const ctx = canvas.getContext('2d');
+  const RN = 512, WORLD = 2.4, PPU = RN / WORLD, AREA_PX = (WORLD / RN) ** 2, raster = new Raster(RN);
+  const L = { aspect: 1.35, N: 12, tubes: [], sel: -1, drag: null, area: 0, bush: 0, spread: 0, best: Infinity };
+  const delta = () => 1 / L.N;
+  function setup(N) {
+    L.N = N; L.tubes = []; L.sel = -1;
+    for (let i = 0; i < N; i++) { const a = TAU * i / N; L.tubes.push({ cx: 0.72 * Math.cos(a), cy: 0.72 * Math.sin(a), th: Math.PI * i / N }); }
+    L.spread = unionArea(L.tubes);
+    L.bush = unionArea(L.tubes.map((t) => ({ cx: 0, cy: 0, th: t.th })));
+    L.best = Infinity; refresh(false);
+  }
+  function unionArea(tubes) {
+    raster.clear(); const g = raster.g; g.fillStyle = '#000'; const d = 1 / tubes.length;
+    for (const t of tubes) { g.save(); g.translate((t.cx + WORLD / 2) * PPU, (WORLD / 2 - t.cy) * PPU); g.rotate(-t.th); g.fillRect(-0.5 * PPU, -d / 2 * PPU, PPU, d * PPU); g.restore(); }
+    return raster.count() * AREA_PX;
+  }
+  function hit(w) { const d = delta(); for (let i = L.tubes.length - 1; i >= 0; i--) { const t = L.tubes[i]; const dx = w[0] - t.cx, dy = w[1] - t.cy; const u = dx * Math.cos(t.th) + dy * Math.sin(t.th), v = -dx * Math.sin(t.th) + dy * Math.cos(t.th); if (Math.abs(u) <= 0.5 && Math.abs(v) <= d / 2 + 0.03) return i; } return -1; }
+  const nRow = h('div', { class: 'row' }, h('span', { class: 'eyebrow' }, 'Tubes'));
+  const nBtns = [10, 12, 16].map((n) => btn(`${n} tubes, δ = 1/${n}`, () => { setup(n); nBtns.forEach((b) => b.classList.toggle('active', +b.dataset.n === n)); }, 'small' + (n === 12 ? ' active' : '')));
+  nBtns.forEach((b, i) => (b.dataset.n = [10, 12, 16][i])); nRow.append(...nBtns);
+  const bushBtn = btn('Show the bush: all through one point', () => { L.tubes.forEach((t) => { t.cx = 0; t.cy = 0; }); refresh(true); }, 'small');
+  const spreadBtn = btn('Spread them out again', () => { setup(L.N); }, 'small');
+  const mArea = makeMeter('Union area (each tube has area δ)', true); const mBush = makeMeter('Bush benchmark · Córdoba floor shape c/log(1/δ)');
+  const nextBtn = btn('Select next tube', () => { L.sel = (L.sel + 1) % L.tubes.length; canvas.focus(); }, 'small');
+  controls.append(nRow, h('div', { class: 'row' }, bushBtn, spreadBtn, nextBtn, h('span', { class: 'kbd-hint' }, 'Drag any tube, or select one and use the arrow keys. Directions are fixed; only position changes.')), h('div', { class: 'meters' }, mArea, mBush));
+  function starsNow() { if (!Number.isFinite(L.best)) return 0; let s = 0; if (L.best <= 0.85 * L.spread) s = 1; if (L.best <= 1.05 * L.bush) s = 2; if (L.best <= 0.90 * L.bush) s = 3; return s; }
+  function refresh(user) {
+    L.area = unionArea(L.tubes); const improved = L.area < L.best; if (improved) L.best = L.area;
+    mArea.set(fmt(L.area, 3) + ` of ${fmt(L.N * delta(), 2)} total`, L.area / 1.0); mBush.set(fmt(L.bush, 3) + ` · 1/ln(1/δ) = ${(1 / Math.log(1 / delta())).toFixed(3)}`, L.bush);
+    if (user) Audio.sfx(improved && L.area < L.bush ? 'good' : 'tick');
+    setStatus(`Best union <b>${fmt(L.best, 3)}</b> vs bush <b>${fmt(L.bush, 3)}</b> · stars: beat 0.85× spread, then 1.05× bush, then 0.90× bush · now <b>${starsText(starsNow())}</b>`);
+    overlay.innerHTML = ''; overlay.append(chip(`${L.N} tubes · width δ = 1/${L.N} · length 1`, 'accent'), chip(`union ${fmt(L.area, 3)}`, 'accent2'), chip(`two tubes at angle θ overlap ≤ δ²/θ ≈ ${(delta() ** 2 / (Math.PI / L.N)).toFixed(4)} for neighbours`));
+  }
+  const toWorld = (p) => { const s = WORLD / Math.min(canvas.width, canvas.height); return [(p.x - canvas.width / 2) * s, (canvas.height / 2 - p.y) * s]; };
+  let lastRefresh = 0;
+  const detach = attachPointer(canvas, {
+    down(p) { const w = toWorld(p); const i = hit(w); L.sel = i; if (i >= 0) { L.drag = { last: w }; Audio.sfx('click'); } },
+    drag(p) { if (!L.drag || L.sel < 0) return; const w = toWorld(p); const t = L.tubes[L.sel]; t.cx = clamp(t.cx + w[0] - L.drag.last[0], -1.1, 1.1); t.cy = clamp(t.cy + w[1] - L.drag.last[1], -1.1, 1.1); L.drag.last = w; const now = performance.now(); if (now - lastRefresh > 60) { lastRefresh = now; refresh(true); } },
+    up() { if (L.drag) { L.drag = null; refresh(false); } },
+  });
+  canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Tube board. Press N to select the next tube, then arrow keys to move it.');
+  const onKey = (e) => {
+    if (e.key === 'n' || e.key === 'N') { L.sel = (L.sel + 1) % L.tubes.length; Audio.sfx('click'); e.preventDefault(); return; }
+    if (L.sel < 0) return; const t = L.tubes[L.sel]; const d = 0.02; let ok = true;
+    if (e.key === 'ArrowLeft') t.cx -= d; else if (e.key === 'ArrowRight') t.cx += d; else if (e.key === 'ArrowUp') t.cy += d; else if (e.key === 'ArrowDown') t.cy -= d; else ok = false;
+    if (ok) { t.cx = clamp(t.cx, -1.1, 1.1); t.cy = clamp(t.cy, -1.1, 1.1); e.preventDefault(); refresh(true); }
+  };
+  canvas.addEventListener('keydown', onKey);
+  L.draw = () => {
+    const W = canvas.width, H = canvas.height, P = palette(), dpr = boardDpr;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    const side = Math.min(W, H), ox = (W - side) / 2, oy = (H - side) / 2, S = side / WORLD;
+    ctx.strokeStyle = withAlpha(P.fg, 0.07); ctx.lineWidth = 1 * dpr; ctx.beginPath();
+    for (let v = -1; v <= 1; v += 0.5) { ctx.moveTo(ox + (v + WORLD / 2) * S, oy); ctx.lineTo(ox + (v + WORLD / 2) * S, oy + side); ctx.moveTo(ox, oy + (WORLD / 2 - v) * S); ctx.lineTo(ox + side, oy + (WORLD / 2 - v) * S); } ctx.stroke();
+    const d = delta();
+    L.tubes.forEach((t, i) => {
+      ctx.save(); ctx.translate(ox + (t.cx + WORLD / 2) * S, oy + (WORLD / 2 - t.cy) * S); ctx.rotate(-t.th);
+      ctx.fillStyle = withAlpha(P.accent, 0.32); ctx.fillRect(-0.5 * S, -d / 2 * S, S, d * S);
+      ctx.strokeStyle = i === L.sel ? P.accent2 : withAlpha(P.accent, 0.8); ctx.lineWidth = (i === L.sel ? 2.5 : 1) * dpr; ctx.strokeRect(-0.5 * S, -d / 2 * S, S, d * S);
+      ctx.restore();
+    });
+    ctx.fillStyle = P.muted; ctx.font = `${12 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'center';
+    ctx.fillText(fitText(ctx, 'darker teal means more tubes overlap there · drag a tube to move it', W - 20 * dpr, 12, dpr), W / 2, H - 8 * dpr);
+  };
+  L.stars = starsNow; L.destroy = () => { detach(); canvas.removeEventListener('keydown', onKey); canvas.tabIndex = -1; };
+  setup(12);
+  L.debug = { setup, setCenters(cs) { cs.forEach((c, i) => { if (L.tubes[i]) { L.tubes[i].cx = c[0]; L.tubes[i].cy = c[1]; } }); refresh(false); return L.area; }, area: () => L.area, bush: () => L.bush, spread: () => L.spread, best: () => L.best, tubes: () => L.tubes };
+  return L;
+}
+
+/* ================================================================== LEVEL 6: Focus the wave */
+function hexToRgb(c) { const m = /^#([0-9a-f]{6})$/i.exec(c); if (!m) return [120, 120, 120]; const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function level6({ canvas, controls, overlay, setStatus }) {
+  const ctx = canvas.getContext('2d');
+  const G = 128, LX = 4, DX = LX / G, DT = 0.5 * DX, C2 = (DT / DX) ** 2, T_END = 2.5, SPONGE = 14, WIDTH = 0.07;
+  const L = { aspect: 1.1, rings: [], radius: 1.2, amp: 1, ts: 1.2, running: false, result: null, prediction: null, firstRun: true, hover: null,
+    prev: new Float32Array(G * G), cur: new Float32Array(G * G), next: new Float32Array(G * G), damp: new Float32Array(G * G), field: null, peakSeries: [] };
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { const m = Math.min(i, j, G - 1 - i, G - 1 - j); L.damp[j * G + i] = m < SPONGE ? 1 - 0.08 * ((SPONGE - m) / SPONGE) ** 2 : 1; }
+  const img = document.createElement('canvas'); img.width = img.height = G; const ig = img.getContext('2d'); const idata = ig.createImageData(G, G);
+  function initial(arr, shift) {
+    arr.fill(0);
+    for (const r of L.rings) for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { const x = (i + 0.5) * DX, y = (j + 0.5) * DX; const rho = Math.hypot(x - r.cx, y - r.cy); arr[j * G + i] += r.a * Math.exp(-(((rho - (r.r - shift)) / WIDTH) ** 2)); }
+  }
+  function step() {
+    const { prev, cur, next, damp } = L;
+    for (let j = 1; j < G - 1; j++) for (let i = 1; i < G - 1; i++) { const k = j * G + i; const lap = cur[k - 1] + cur[k + 1] + cur[k - G] + cur[k + G] - 4 * cur[k]; next[k] = (2 * cur[k] - prev[k] + C2 * lap) * damp[k]; }
+    L.prev = cur; L.cur = next; L.next = prev;
+  }
+  function run() {
+    if (L.running || !L.rings.length) { if (!L.rings.length) toast('Place at least one ring on the board first'); return; }
+    L.running = true; L.result = null; L.peakSeries = []; runBtn.disabled = true;
+    initial(L.prev, 0); initial(L.cur, DT);
+    let amax = 0, n4 = 0; for (let k = 0; k < G * G; k++) { amax = Math.max(amax, Math.abs(L.prev[k])); n4 += L.prev[k] ** 4; }
+    const norm0 = Math.pow(n4 * DX * DX, 0.25);
+    const R = { amax, norm0, acc4: 0, snap: null, snapPeak: 0, snapT: null, peakMax: 0, peakMaxT: 0 };
+    let t = DT, stepsDone = 0; const total = Math.round(T_END / DT);
+    Audio.sfx('whoosh');
+    function frame() {
+      for (let s = 0; s < 4 && stepsDone < total; s++) {
+        step(); t += DT; stepsDone++;
+        let pk = 0, s4 = 0; const u = L.cur; for (let k = 0; k < G * G; k++) { const a = Math.abs(u[k]); if (a > pk) pk = a; s4 += a * a * a * a; }
+        L.peakSeries.push([t, pk / amax]);
+        if (t >= 1 && t <= 2) R.acc4 += s4 * DX * DX * DT;
+        if (pk > R.peakMax) { R.peakMax = pk; R.peakMaxT = t; }
+        if (Math.abs(t - L.ts) < DT / 2 + 1e-9) { R.snap = Float32Array.from(u); R.snapPeak = pk; R.snapT = t; }
+      }
+      L.field = L.cur;
+      if (stepsDone < total) { requestAnimationFrame(frame); return; }
+      L.running = false; runBtn.disabled = false;
+      const peakRatio = R.snapPeak / amax, avgRatio = Math.pow(R.acc4, 0.25) / norm0, bestRatio = R.peakMax / amax;
+      L.result = { peakRatio, avgRatio, bestRatio, bestT: R.peakMaxT, snap: R.snap };
+      L.field = R.snap || L.cur; L.firstRun = false;
+      if (peakRatio > L.bestPeak) L.bestPeak = peakRatio;
+      Audio.sfx(peakRatio >= 3 ? 'good' : 'tick'); if (peakRatio >= 3) { state.score += 50; state.streak++; updateHud(); }
+      refresh();
+    }
+    requestAnimationFrame(frame);
+  }
+  L.bestPeak = 0;
+  const sR = makeSlider({ id: 'radius', label: 'Ring radius r (collapses at t = r)', min: 0.4, max: 1.9, step: 0.05, value: L.radius, format: (v) => v.toFixed(2), oninput: (v) => { L.radius = v; } });
+  const sTs = makeSlider({ id: 'ts', label: 'Snapshot time t_s', min: 0.5, max: 2.4, step: DT, value: L.ts, format: (v) => v.toFixed(3), oninput: (v) => { L.ts = v; Audio.sfx('tick'); } });
+  const runBtn = btn('Run the wave', run, 'primary');
+  const clearBtn = btn('Clear rings', () => { L.rings = []; L.field = null; L.result = null; refresh(); }, 'small');
+  const centerBtn = btn('Place a ring at the center', () => { if (L.running) return; if (L.rings.length >= 4) { toast('Four rings is the limit. Clear to start over.'); return; } L.rings.push({ cx: LX / 2, cy: Math.min(LX / 2, ((canvas.height - 54 * boardDpr) / canvas.width) * LX / 2), r: L.radius, a: L.amp }); L.field = null; L.result = null; refresh(); }, 'small');
+  const mPeak = makeMeter('Instant peak at t_s (× initial amplitude)', true); const mAvg = makeMeter('Averaged size over t ∈ [1,2] (× initial L⁴ norm)'); const mBest = makeMeter('Largest instant peak during the run');
+  const predBox = h('div', { class: 'explain' });
+  function renderPrediction() {
+    predBox.innerHTML = '';
+    if (L.prediction == null) {
+      predBox.append(h('div', {}, h('b', {}, 'Predict before the first run: '), 'when you make the instant peak grow, will the time-averaged size (over t ∈ [1,2]) grow as much?'),
+        h('div', { class: 'row', style: 'justify-content:flex-start;margin-top:8px' },
+          btn('No, it stays tame', () => { L.prediction = 'no'; renderPrediction(); }, 'small'),
+          btn('Yes, it grows the same', () => { L.prediction = 'yes'; renderPrediction(); }, 'small'),
+          btn('Only for big rings', () => { L.prediction = 'big'; renderPrediction(); }, 'small')));
+    } else if (L.firstRun) predBox.textContent = `Prediction recorded: "${{ no: 'stays tame', yes: 'grows the same', big: 'only for big rings' }[L.prediction]}". Now run the wave.`;
+    else predBox.innerHTML = L.prediction === 'no' ? '<b>Prediction correct.</b> Focusing makes the instant peak jump; the time average barely moves. That gap is what local smoothing measures.' : `<b>Prediction missed.</b> You said "${{ yes: 'grows the same', big: 'only for big rings' }[L.prediction]}", but the average stays tame while the instant peak grows. Averaging over time hides the focus.`;
+  }
+  renderPrediction();
+  controls.append(h('div', { class: 'grid' }, sR, sTs), h('div', { class: 'row' }, runBtn, centerBtn, clearBtn, h('span', { class: 'kbd-hint' }, 'Tap the board to place up to 4 rings. A ring of radius r focuses at its center at time t = r.')), predBox, h('div', { class: 'meters' }, mPeak, mAvg, mBest));
+  function starsNow() { let s = 0; if (L.bestPeak >= 3) s++; if (L.bestPeak >= 5) s++; if (L.prediction === 'no' && !L.firstRun) s++; else if (L.bestPeak >= 7) s++; return Math.min(3, s); }
+  function refresh() {
+    const r = L.result;
+    mPeak.set(r ? r.peakRatio.toFixed(2) + '×' : '–', r ? r.peakRatio / 5 : 0); mAvg.set(r ? r.avgRatio.toFixed(2) + '×' : '–', r ? r.avgRatio / 5 : 0); mBest.set(r ? `${r.bestRatio.toFixed(2)}× at t = ${r.bestT.toFixed(2)}` : '–', r ? r.bestRatio / 5 : 0);
+    setStatus(`Best instant peak <b>${L.bestPeak ? L.bestPeak.toFixed(2) + '×' : '–'}</b> · stars at 3× and 5×, third star for the right prediction (or 7×) · now <b>${starsText(starsNow())}</b>`);
+    overlay.innerHTML = ''; overlay.append(chip(`${L.rings.length} ring${L.rings.length === 1 ? '' : 's'} · c = 1 · snapshot t_s = ${L.ts.toFixed(2)}`, 'accent'), r ? chip(`peak ${r.peakRatio.toFixed(2)}× · average ${r.avgRatio.toFixed(2)}×`, 'accent2') : chip('place rings, then run', 'accent2'));
+    renderPrediction();
+  }
+  const toWorld = (p) => [p.x / canvas.width * LX, p.y / canvas.height * LX * (canvas.height / canvas.width) * (canvas.width / canvas.height)];
+  const detach = attachPointer(canvas, {
+    down(p) { if (L.running) return; const sx = LX / canvas.width; const x = p.x * sx, y = p.y * sx; if (y > LX) return; if (L.rings.length >= 4) { toast('Four rings is the limit. Clear to start over.'); return; }
+      L.rings.push({ cx: x, cy: y, r: L.radius, a: L.amp }); L.field = null; L.result = null; Audio.sfx('click'); refresh(); },
+    move(p) { const sx = LX / canvas.width; L.hover = [p.x * sx, p.y * sx]; },
+  });
+  refresh();
+  L.draw = () => {
+    const W = canvas.width, H = canvas.height, P = palette(), dpr = boardDpr;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    const S = W / LX, fieldH = LX * S; // field occupies full width; square region of height W (canvas height is W/1.5, so the field is cropped vertically)
+    const fieldPixH = H - 54 * dpr; const visibleWorldH = fieldPixH / S;
+    if (L.field) {
+      const bg = hexToRgb(P.bg.startsWith('#') ? P.bg : '#000000'), c1 = hexToRgb(P.accent), c2 = hexToRgb(P.accent2);
+      const amax = Math.max(1e-6, L.result ? 1 : 1); let scale = 0; for (let k = 0; k < G * G; k++) scale = Math.max(scale, Math.abs(L.field[k]));
+      scale = Math.max(scale, 0.25); const d = idata.data;
+      for (let k = 0; k < G * G; k++) { const v = L.field[k] / scale; const a = Math.min(1, Math.abs(v) ** 0.7); const c = v >= 0 ? c1 : c2; d[k * 4] = bg[0] + (c[0] - bg[0]) * a; d[k * 4 + 1] = bg[1] + (c[1] - bg[1]) * a; d[k * 4 + 2] = bg[2] + (c[2] - bg[2]) * a; d[k * 4 + 3] = 255; }
+      ig.putImageData(idata, 0, 0);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, fieldPixH); ctx.clip(); ctx.imageSmoothingEnabled = true; ctx.drawImage(img, 0, 0, W, W); ctx.restore();
+    }
+    // rings outline
+    for (const r of L.rings) { ctx.strokeStyle = withAlpha(P.fg, 0.5); ctx.setLineDash([4 * dpr, 4 * dpr]); ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.arc(r.cx * S, r.cy * S, r.r * S, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = P.fg; ctx.beginPath(); ctx.arc(r.cx * S, r.cy * S, 3 * dpr, 0, TAU); ctx.fill();
+      ctx.font = `${11 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'left'; ctx.fillText(`focus at t = ${r.r.toFixed(2)}`, r.cx * S + 6 * dpr, r.cy * S - 6 * dpr); }
+    if (!L.running && L.hover && L.rings.length < 4 && !L.field) { ctx.strokeStyle = withAlpha(P.accent2, 0.6); ctx.beginPath(); ctx.arc(L.hover[0] * S, L.hover[1] * S, L.radius * S, 0, TAU); ctx.stroke(); }
+    // peak chart strip
+    const y0 = fieldPixH, hh = H - y0; ctx.fillStyle = P.card; ctx.fillRect(0, y0, W, hh);
+    ctx.strokeStyle = P.line; ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(W, y0); ctx.stroke();
+    const X = (t) => (t / T_END) * W, Y = (v) => y0 + hh - 6 * dpr - (hh - 14 * dpr) * Math.min(1, v / 6);
+    ctx.fillStyle = withAlpha(P.accent, 0.12); ctx.fillRect(X(1), y0, X(2) - X(1), hh);
+    if (L.peakSeries.length) { ctx.strokeStyle = P.accent2; ctx.lineWidth = 2 * dpr; ctx.beginPath(); L.peakSeries.forEach(([t, v], i) => { if (i === 0) ctx.moveTo(X(t), Y(v)); else ctx.lineTo(X(t), Y(v)); }); ctx.stroke(); }
+    ctx.strokeStyle = P.fg; ctx.setLineDash([3 * dpr, 3 * dpr]); ctx.beginPath(); ctx.moveTo(X(L.ts), y0); ctx.lineTo(X(L.ts), H); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = P.muted; ctx.font = `${11 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'left';
+    ctx.fillText(fitText(ctx, 'max |u| over space, as a multiple of the initial amplitude · shaded: the averaging window t ∈ [1,2] · dashed: snapshot t_s', W - 12 * dpr, 11, dpr), 6 * dpr, y0 + 13 * dpr);
+    ctx.textAlign = 'right'; ctx.fillText('t = 0 … 2.5', W - 6 * dpr, H - 6 * dpr);
+  };
+  L.stars = starsNow; L.destroy = () => detach();
+  L.debug = { addRing(cx, cy, r) { L.rings.push({ cx, cy, r, a: 1 }); refresh(); }, run, setTs(t) { L.ts = t; sTs.set(t); }, result: () => L.result, predict(p) { L.prediction = p; renderPrediction(); }, running: () => L.running, clear: () => clearBtn.click() };
+  return L;
+}
+
+/* ================================================================== LEVEL 7: The chain (boss) */
+function level7({ canvas, controls, overlay, setStatus }) {
+  const ctx = canvas.getContext('2d');
+  const CARDS = [
+    { id: 'ls', name: 'Local smoothing', def: 'Averaging the wave propagator over t ∈ [1,2] gains almost 1/p of a derivative in Lᵖ.' },
+    { id: 'br', name: 'Bochner–Riesz', def: 'Smoothly cut-off Fourier integrals of an Lᵖ function converge in Lᵖ, in the conjectured range.' },
+    { id: 'rs', name: 'Restriction', def: 'The Fourier transform of an Lᵖ function can be restricted to the sphere, with an Lᵠ bound (Stein).' },
+    { id: 'km', name: 'Kakeya maximal', def: 'Averages over δ-tubes in all directions are bounded in Lⁿ with only a δ⁻ᵋ loss.' },
+    { id: 'ks', name: 'Kakeya set', def: 'Every set containing a unit segment in every direction has Hausdorff dimension n.' },
+  ];
+  const ORDER = ['ls', 'br', 'rs', 'km', 'ks'];
+  const L = { aspect: 1.3, slots: [null, null, null, null, null], sel: null, attempts: 0, solved: false, glow: 0 };
+  const rnd = seeded(7 + (Date.now() & 1023));
+  const pool = CARDS.slice().sort(() => rnd() - 0.5);
+  const poolBox = h('div', { class: 'pool' }), slotBox = h('div', { class: 'slots' });
+  const msg = h('div', { class: 'explain' }, 'Tap a card, then tap the slot where it belongs. The top slot is the strongest statement; each arrow means "implies".');
+  const checkBtn = btn('Check the order', () => {
+    if (L.slots.some((s) => !s)) { toast('Fill all five slots first'); Audio.sfx('bad'); return; }
+    L.attempts++; const ok = L.slots.every((s, i) => s.id === ORDER[i]);
+    render();
+    if (ok) { L.solved = true; L.glow = 1; Audio.sfx('fanfare'); state.score += 150; state.streak++; updateHud(); msg.innerHTML = `<b>Correct.</b> Local smoothing ⇒ Bochner–Riesz ⇒ restriction ⇒ Kakeya maximal ⇒ Kakeya set. Stein's square-function conjecture sits beside local smoothing at the top. Tao's 2001 Notices article "From rotating needles to stability of waves" tells this story. Now take the six-question check.`; checkBtn.disabled = true; }
+    else { Audio.sfx('bad'); state.streak = 0; updateHud(); const right = L.slots.filter((s, i) => s.id === ORDER[i]).length; msg.textContent = `${right} of 5 in the right place. Green slots are correct; red ones are not. Think about which statement is about sets, which about averages, and which about waves.`; }
+    refresh();
+  }, 'primary');
+  controls.append(msg, h('div', { class: 'sorter' }, h('div', {}, h('div', { class: 'eyebrow' }, 'Cards'), poolBox), h('div', {}, h('div', { class: 'eyebrow' }, 'The chain, strongest first'), slotBox)), h('div', { class: 'row' }, checkBtn));
+  function render() {
+    poolBox.innerHTML = ''; slotBox.innerHTML = '';
+    pool.filter((c) => !L.slots.includes(c)).forEach((c) => poolBox.append(h('button', { class: 'sort-card' + (L.sel === c ? ' selected' : ''), onclick: () => { Audio.sfx('click'); L.sel = L.sel === c ? null : c; render(); } }, h('b', {}, c.name), h('small', {}, c.def))));
+    L.slots.forEach((s, i) => {
+      const checked = L.attempts > 0 && s; const cls = 'slot' + (s ? ' filled' : '') + (checked ? (s.id === ORDER[i] ? ' ok' : ' ko') : '');
+      const slot = h('div', { class: cls, role: 'button', tabindex: 0, 'aria-label': `Slot ${i + 1}` });
+      slot.append(h('div', { class: 'idx' }, `${i + 1}${i < 4 ? '  ⇒ next' : '  (weakest)'}`));
+      if (s) slot.append(h('button', { class: 'sort-card', onclick: () => { Audio.sfx('click'); L.slots[i] = null; if (L.solved) return; render(); refresh(); } }, h('b', {}, s.name), h('small', {}, s.def)));
+      const place = () => { if (L.solved) return; if (L.sel) { const from = L.slots.indexOf(L.sel); if (from >= 0) L.slots[from] = null; const prevHere = L.slots[i]; L.slots[i] = L.sel; L.sel = prevHere || null; Audio.sfx('whoosh'); render(); refresh(); } };
+      slot.addEventListener('click', (e) => { if (e.target === slot || e.target.classList.contains('idx')) place(); });
+      slot.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); place(); } });
+      slotBox.append(slot);
+    });
+  }
+  function starsNow() { if (!L.solved) return 0; return L.attempts <= 1 ? 3 : L.attempts === 2 ? 2 : 1; }
+  function refresh() {
+    setStatus(`Attempts <b>${L.attempts}</b> · solved: <b>${L.solved ? 'yes' : 'not yet'}</b> · stars: first try 3, second 2, later 1 · now <b>${starsText(starsNow())}</b>`);
+    overlay.innerHTML = ''; overlay.append(chip('Boss: order the chain', 'accent'), chip(`${L.slots.filter(Boolean).length} of 5 placed`, 'accent2'));
+  }
+  render(); refresh();
+  L.draw = (dt) => {
+    const W = canvas.width, H = canvas.height, P = palette(), dpr = boardDpr;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    if (L.glow > 0) L.glow = Math.max(0, L.glow - dt * 0.3);
+    const n = 5, boxH = Math.min(64 * dpr, (H - 40 * dpr) / n * 0.62), gap = (H - 30 * dpr - n * boxH) / (n - 1), boxW = Math.min(W * 0.56, 420 * dpr), x0 = (W - boxW) / 2;
+    ctx.font = `${14 * dpr}px ${cssVar('--font-body')}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let i = 0; i < n; i++) {
+      const y = 15 * dpr + i * (boxH + gap); const s = L.slots[i]; const ok = L.attempts > 0 && s && s.id === ORDER[i];
+      ctx.fillStyle = s ? withAlpha(L.solved ? P.good : (L.attempts && !ok ? P.bad : P.accent), 0.18 + 0.4 * L.glow) : P.card;
+      ctx.strokeStyle = s ? (L.solved ? P.good : (L.attempts && !ok ? P.bad : P.accent)) : P.line; ctx.lineWidth = 2 * dpr;
+      ctx.beginPath(); ctx.roundRect(x0, y, boxW, boxH, 12 * dpr); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = s ? P.fg : P.muted; ctx.fillText(s ? s.name : `slot ${i + 1}`, x0 + boxW / 2, y + boxH / 2);
+      if (i < n - 1) { const ay = y + boxH, by = y + boxH + gap; ctx.strokeStyle = P.accent2; ctx.beginPath(); ctx.moveTo(W / 2, ay + 3 * dpr); ctx.lineTo(W / 2, by - 3 * dpr); ctx.stroke(); ctx.beginPath(); ctx.moveTo(W / 2 - 6 * dpr, by - 10 * dpr); ctx.lineTo(W / 2, by - 3 * dpr); ctx.lineTo(W / 2 + 6 * dpr, by - 10 * dpr); ctx.stroke();
+        ctx.fillStyle = P.muted; ctx.font = `${11 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'left'; ctx.fillText('implies', W / 2 + 10 * dpr, (ay + by) / 2); ctx.font = `${14 * dpr}px ${cssVar('--font-body')}`; ctx.textAlign = 'center'; }
+    }
+    ctx.fillStyle = P.muted; ctx.font = `${11 * dpr}px ${cssVar('--font-mono')}`; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(fitText(ctx, 'sibling at the top: Stein square function', W * 0.46, 11, dpr), W - 10 * dpr, H - 8 * dpr);
+    ctx.textAlign = 'left'; ctx.fillText(fitText(ctx, 'weakest statement, bottom: a fact about sets', W * 0.46, 11, dpr), 10 * dpr, H - 8 * dpr);
+  };
+  L.stars = starsNow;
+  L.debug = { place(ids) { L.slots = ids.map((id) => CARDS.find((c) => c.id === id)); render(); refresh(); }, check: () => checkBtn.click(), solved: () => L.solved };
+  return L;
+}
+
+/* ================================================================== content */
+const LEVELS = [
+  { title: 'Build a wave', subtitle: 'Fourier synthesis: eight harmonics, one target', create: level1,
+    idea: 'Any periodic signal is a sum of sines (Fourier 1807, Dirichlet 1829). Harmonic analysis asks how big such sums get, measured by L<sup>p</sup> norms.',
+    goal: 'Match the square, sawtooth and triangle waves with eight harmonics. Your score compares your coefficients with the best eight-harmonic approximation. Average 0.70, 0.85 and 0.95 for one, two and three stars.',
+    deeper: '<p>An L<sup>p</sup> norm measures the size of a function: ‖f‖<sub>p</sub> = (∫|f|<sup>p</sup>)<sup>1/p</sup>. For p = 2 the Plancherel theorem (Parseval, for series) says ‖f‖<sub>2</sub> equals the ℓ² norm of its Fourier coefficients: the Fourier transform conserves energy. That is why the match score here is a 2-norm distance between coefficient vectors, and why the best eight-term approximation is simply the truncated series.</p><p>Partial sums converge in L² for every square-integrable function, yet near a jump they overshoot by about 9% of the jump no matter how many terms are added. This is the Gibbs phenomenon, a failure of uniform convergence that the 2-norm does not see.</p><p>The hard problems of harmonic analysis live at p ≠ 2, where the Fourier transform no longer preserves size and one asks how large operators built from it can be. In the standard normalization a square wave of height 1 has coefficients (4/π)(1/n) over odd n; a sawtooth has (2/π)((−1)<sup>n+1</sup>/n); a triangle has (8/π²)((−1)<sup>(n−1)/2</sup>/n²) over odd n. The sliders are scaled so that the fundamental has amplitude 1.</p>',
+    quiz: [
+      { q: 'A square wave contains which harmonics?', a: ['Odd harmonics only, with amplitudes falling like 1/n', 'Even harmonics only', 'All harmonics equally', 'Only the fundamental'], c: 0, e: 'The square wave is odd and half-wave symmetric, so only odd sines appear, with coefficients (4/π)(1/n).' },
+      { q: 'Parseval (Plancherel) says the L² norm of a function equals…', a: ['the ℓ² norm of its Fourier coefficients', 'its maximum value', 'the sum of its coefficients', 'its L¹ norm'], c: 0, e: 'Energy is conserved by the Fourier transform: ∫|f|² equals the sum of |coefficient|² (up to normalization).' },
+      { q: 'As you add more harmonics to approximate a square wave, the Gibbs overshoot near the jump…', a: ['stays near 9% of the jump, just narrower', 'vanishes quickly', 'grows without bound', 'moves far away from the jump'], c: 0, e: 'The overshoot height tends to about 8.9% of the jump; only its width shrinks. L² convergence does not imply uniform convergence.' },
+    ] },
+  { title: 'The uncertainty gate', subtitle: 'Time width times frequency width has a floor', create: level2,
+    idea: 'Narrow in time means wide in frequency. This trade-off is a theorem about the Fourier transform, not a limit of instruments.',
+    goal: 'Fit the Gaussian packet inside both gates by adjusting its width, center and carrier. When the gates are too tight for any packet, say so: press Impossible. Each correct call is a star.',
+    deeper: '<p>For a signal g with energy density |g(t)|² and spectral energy density |ĝ(f)|², the standard deviations obey σ<sub>t</sub>·σ<sub>f</sub> ≥ 1/(4π), with equality exactly for Gaussian envelopes. This is the Heisenberg–Gabor inequality; the quantum uncertainty principle is the same statement about position and momentum. Because it is a theorem about the Fourier transform, no instrument escapes it. A packet whose energy lies within ±2σ of a center occupies about 4σ<sub>t</sub> seconds and 4σ<sub>f</sub> hertz, so the product of the two gate widths must be at least 16/(4π) = 4/π ≈ 1.27 for any Gaussian to fit.</p><p>In harmonic analysis the same fact appears as geometry. A function concentrated on a δ-tube, a δ × 1 rectangle in the plane or a δ<sup>n−1</sup> × 1 cylinder in R<sup>n</sup>, has Fourier transform spread over a dual tube of dimensions 1/δ × 1 pointing across the original. Cutting a wave into pieces whose frequencies lie in small caps of the unit sphere produces exactly such tubes, called wave packets. That is why questions about waves and about Fourier restriction become questions about how tubes pointing in different directions can overlap.</p>',
+    quiz: [
+      { q: 'Halving a Gaussian packet’s duration does what to its bandwidth?', a: ['Doubles it', 'Halves it', 'Leaves it unchanged', 'Squares it'], c: 0, e: 'σ_t·σ_f is fixed at 1/(4π) for Gaussians, so halving σ_t doubles σ_f.' },
+      { q: 'A function concentrated in a δ-tube has a Fourier transform essentially concentrated in…', a: ['a dual tube of width 1/δ pointing across the original', 'a single point', 'a ball of radius δ', 'nothing can be said'], c: 0, e: 'Uncertainty in each direction separately: a width δ in space becomes a width 1/δ in frequency.' },
+      { q: 'The uncertainty inequality is fundamentally a property of…', a: ['the Fourier transform itself', 'measurement devices', 'quantum mechanics only', 'numerical rounding'], c: 0, e: 'It follows from the Fourier transform alone; quantum mechanics inherits it because wavefunctions and momenta are Fourier pairs.' },
+    ] },
+  { title: 'Turn the needle', subtitle: 'Kakeya’s problem and Besicovitch’s answer', create: level3,
+    idea: 'Kakeya asked for the least area in which a unit needle can turn 180°. Besicovitch showed there is no least area: cut a triangle into thin pieces and slide them so they overlap, and the needle turns in almost nothing.',
+    goal: 'Phase A: turn the needle a half turn and watch the swept area. Phase B: build a Perron tree. Stars for a union area below 0.45, 0.40 and 0.35 of the original triangle. Six cuts cannot go much below 0.30 here; the real construction keeps cutting, and the area goes to zero.',
+    deeper: '<p>Kakeya (1917) asked for the least area in which a unit needle can be turned through 180°, suspecting the deltoid’s π/8. Besicovitch (1919, published more widely in 1928) showed there is no least area: for any ε &gt; 0 the needle can be turned in area less than ε.</p><p>Two ideas do the work. First, a triangle of height 1 can be cut into 2<sup>k</sup> thin triangles sharing the apex and slid along the base so that they overlap heavily; the union, a Perron tree, has area tending to 0 as k grows, yet each thin triangle still contains a unit segment in each of its directions. Second, Pál’s joins: to move a segment to a parallel position far away, slide it along its own line (sweeping no area), rotate by a tiny angle, slide back along the new line, and undo the rotation. The two tiny rotations cost as little as you like, so translation is essentially free.</p><p>Turning inside a Perron tree costs about its area, and three copies cover all 180° of directions. The limiting object is a Besicovitch set: a set of Lebesgue measure zero that contains a unit segment in every direction. Rigid moves alone cannot do this: spinning about the midpoint sweeps a disk of area π/4, about an endpoint a half-disk of area π/2.</p>',
+    quiz: [
+      { q: 'Kakeya conjectured the minimal area was π/8. Besicovitch showed…', a: ['the area can be made arbitrarily small', 'π/8 is optimal', 'π/4 is optimal', 'the needle cannot be turned at all'], c: 0, e: 'There is no minimum: Perron trees plus Pál joins turn the needle in area less than any ε.' },
+      { q: 'A Besicovitch set in the plane…', a: ['has measure zero but contains a unit segment in every direction', 'is a disk of radius 1/2', 'has positive area', 'has dimension 1'], c: 0, e: 'It contains a unit segment in every direction yet has Lebesgue measure zero. Its dimension, by Davies, is nevertheless 2.' },
+      { q: 'Pál joins make which part of the needle’s journey nearly free?', a: ['Translating between parallel positions', 'Rotating through large angles', 'Nothing', 'All of it'], c: 0, e: 'Sliding along the needle’s own line sweeps no area; two tiny rotations do the rest. The rotation itself happens inside the Perron tree.' },
+    ] },
+  { title: 'Measure the dust', subtitle: 'Box counting and Hausdorff dimension', create: level4,
+    idea: 'Zero area is not zero size. Dimension measures how fast the number of ε-boxes needed to cover a set grows as ε shrinks.',
+    goal: 'For each of five shapes, read the box counts off the log-log plot and set your slope to match them. Lock in all five. Average error below 0.30, 0.15 and 0.08 earns one, two and three stars. The textbook dimension appears after each lock.',
+    deeper: '<p>The Minkowski (box-counting) dimension of a set is the exponent d with N(ε) ≈ ε<sup>−d</sup> boxes of side ε needed to cover it; the Hausdorff dimension refines this by letting the covering sets vary in size. For the shapes here the two agree: 1 for a segment, 2 for a square, log 4 / log 3 ≈ 1.262 for the Koch curve, log 3 / log 2 ≈ 1.585 for the Sierpinski triangle.</p><p>A Besicovitch set has zero area, so measure cannot see it, but Davies (1971) proved that in the plane every Besicovitch set has Hausdorff dimension 2: the dust is as large as it can be. The Kakeya set conjecture asks for the same in R<sup>n</sup>: dimension n. It is proven for n = 2 (Davies 1971) and n = 3 (Wang and Zahl, 2025). For general n, Wolff (1995) proved dimension at least (n+2)/2; Bourgain, Katz and Tao improved this using arithmetic combinatorics, and Guth’s polynomial method gave new tools. Dvir (2008) settled the finite-field version with a one-page argument about polynomials vanishing on lines.</p><p>Box counting at finite resolution sees a pre-asymptotic slope. The Perron tree here has positive area, so its dimension is 2, yet five scales of boxes report about 1.6 because the set is a sliver of thin triangles; only as ε → 0 does the count settle to the ε<sup>−2</sup> law. Davies’ theorem is about that limit: however thin the Perron tree gets, the dimension stays 2.</p><p>Local smoothing in all dimensions would imply the Euclidean conjecture in every dimension, which is why the chain of implications matters.</p>',
+    quiz: [
+      { q: 'Davies (1971) proved that Besicovitch sets in the plane have Hausdorff dimension…', a: ['2', '1', '1.5', '0'], c: 0, e: 'Full dimension despite zero area: the two-dimensional Kakeya set conjecture.' },
+      { q: 'Box-counting dimension is the growth exponent of…', a: ['the number of ε-boxes meeting the set, as ε → 0', 'the area', 'the perimeter', 'the number of points'], c: 0, e: 'N(ε) ≈ ε^(−d) defines d; on a log-log plot it is the slope.' },
+      { q: 'The Kakeya set conjecture in R³ was proved by…', a: ['Wang and Zahl (2025)', 'Davies (1971)', 'Besicovitch (1928)', 'Fourier (1807)'], c: 0, e: 'Wang and Zahl proved the three-dimensional case in 2025. Higher dimensions remained open.' },
+    ] },
+  { title: 'Pack the tubes', subtitle: 'The Kakeya maximal function', create: level5,
+    idea: 'Tubes pointing in different directions refuse to overlap much. The Kakeya maximal conjecture is the quantitative form of this in every dimension.',
+    goal: 'Drag the δ-tubes to make their union as small as you can. Beat the spread-out start, then match the bush where all tubes cross one point, then beat the bush by 10% for three stars.',
+    deeper: '<p>Write K<sub>δ</sub>f(ω) for the largest average of |f| over any δ-tube of length 1 pointing in direction ω. The Kakeya maximal function conjecture states ‖K<sub>δ</sub>f‖<sub>L<sup>n</sup>(S<sup>n−1</sup>)</sub> ≤ C<sub>ε</sub> δ<sup>−ε</sup> ‖f‖<sub>L<sup>n</sup>(R<sup>n</sup>)</sub>: averaging over tubes in all directions costs only a tiny power of δ. Applied to the indicator function of a union of δ-tubes with δ-separated directions, the inequality forces that union to have measure at least about δ<sup>ε</sup>, which is how the maximal conjecture implies the set conjecture.</p><p>In the plane Córdoba (1977) proved the sharp bound: the union of about 1/δ such tubes has area at least c/log(1/δ), because two tubes at angle θ overlap in area at most δ²/θ and there are only so many small angles to go around. The pattern that nearly achieves the bound is not the bush but a Perron-tree arrangement in which overlaps are spread along the tubes rather than piled at one point.</p><p>The maximal conjecture is exactly what the restriction and Bochner–Riesz problems need from geometry: wave packets live on tubes, and their interference is governed by how tubes can overlap.</p>',
+    quiz: [
+      { q: 'Two δ-tubes of length 1 at angle θ overlap in area at most about…', a: ['δ²/θ', 'δ', 'θ', 'δ·θ'], c: 0, e: 'The intersection is a parallelogram of width δ and length δ/sin θ.' },
+      { q: 'The Kakeya maximal conjecture bounds K_δ in which norm?', a: ['Lⁿ on the sphere of directions, with a δ^(−ε) loss', 'L¹ with no loss', 'L^∞ with no loss', 'L² with a δ^(−1) loss'], c: 0, e: 'The endpoint exponent is p = n, and an ε-loss in δ is allowed.' },
+      { q: 'The maximal conjecture implies…', a: ['the Kakeya set (dimension) conjecture', 'nothing about sets', 'the Riemann hypothesis', 'only the two-dimensional case'], c: 0, e: 'Apply it to the indicator of a union of tubes: the union cannot be too small, so Besicovitch sets have full dimension.' },
+    ] },
+  { title: 'Focus the wave', subtitle: 'Sogge’s local smoothing conjecture', create: level6,
+    idea: 'Waves focus. Local smoothing says the focusing cannot last: averaging over a time interval gains regularity that no single instant has.',
+    goal: 'Place collapsing rings and set the snapshot to their focus time to make the instant peak large. Stars when the peak at your snapshot reaches 3× and 5× the initial amplitude, and a third for predicting correctly that the time-averaged size stays tame.',
+    deeper: '<p>Solutions of the wave equation u<sub>tt</sub> = Δu can be written with the half-wave propagator e<sup>it√−Δ</sup>. At a fixed time, the map from data f to e<sup>it√−Δ</sup>f loses (n−1)|1/2 − 1/p| derivatives in L<sup>p</sup>, and that loss is sharp: data spread on a sphere of radius 1 focuses to a point at time 1, exactly what your collapsing rings do.</p><p>Sogge’s local smoothing conjecture (1991) says that averaging over t ∈ [1,2] recovers almost 1/p of a derivative: ‖e<sup>it√−Δ</sup>f‖<sub>L<sup>p</sup>(R<sup>n</sup>×[1,2])</sub> ≤ C<sub>ε</sub> ‖f‖<sub>W<sup>s,p</sup></sub> with s = max(0, (n−1)/2 − n/p) + ε, and zero loss at p = 2 by energy conservation. Focusing can happen at an instant but not for an interval. Guth, Wang and Zhang proved the conjecture in R<sup>2+1</sup> (Annals of Mathematics, 2020) through a sharp square function estimate for the cone.</p><p>The simulation compares two different measurements, a sup norm at one time and an L⁴ norm averaged over time, to make the effect visible. The conjecture itself compares the same L<sup>p</sup> norm with and without the time average and keeps precise track of derivatives.</p>',
+    quiz: [
+      { q: 'With wave speed 1, a ring of radius r collapses to its center at time…', a: ['t = r', 't = r²', 't = 1/r', 'never'], c: 0, e: 'Wavefronts travel at speed 1, so the inward-moving front reaches the center after time r.' },
+      { q: 'Local smoothing gains regularity by…', a: ['averaging the solution over a time interval', 'increasing the wave speed', 'changing the dimension', 'working only at p = 2'], c: 0, e: 'The estimate is on R^n × [1,2]; integrating in time washes out the instantaneous focusing.' },
+      { q: 'At p = 2 the local smoothing estimate holds with no loss because of…', a: ['energy conservation', 'the Kakeya conjecture', 'the Gibbs phenomenon', 'box counting'], c: 0, e: 'Plancherel: the L² norm of the solution is constant in time, so averaging in time costs nothing.' },
+    ] },
+  { title: 'The chain', subtitle: 'Boss: order five conjectures by implication', create: level7,
+    idea: 'Five famous conjectures form a chain: the strongest statement about waves implies, step by step, a statement about sets of lines. Prove the top and everything below falls.',
+    goal: 'Order the five cards from strongest to weakest: each one implies the next. Three stars for a correct order on the first try. Then take the six-question check.',
+    deeper: '<p>Local smoothing for the wave equation implies the Bochner–Riesz conjecture (convergence of smoothly truncated Fourier integrals in L<sup>p</sup>), which implies Stein’s restriction conjecture (the Fourier transform of an L<sup>p</sup> function has a trace on the sphere), which implies the Kakeya maximal conjecture, which implies the Kakeya set conjecture (dimension n). Stein’s square-function conjecture is a sibling at the top; it also implies Bochner–Riesz, and square-function estimates are the tool Guth, Wang and Zhang used for local smoothing in the plane.</p><p>The arrows only go one way. Kakeya is a statement about geometry alone, and even a full proof of it would not settle restriction, Bochner–Riesz or local smoothing. Conversely, a proof of local smoothing in every dimension would settle all of them at once, which is why such a claim is extraordinary. Tao’s 2001 Notices of the AMS article “From rotating needles to stability of waves” lays out this chain for a general mathematical audience.</p>',
+    quiz: [
+      { q: 'If local smoothing holds in all dimensions, which of these follows?', a: ['Bochner–Riesz, restriction, Kakeya maximal and Kakeya set, all in all dimensions', 'Only the Kakeya set conjecture', 'Nothing else', 'The Riemann hypothesis'], c: 0, e: 'Local smoothing sits at the top of the chain; every implication runs downward.' },
+      { q: 'Davies proved which case?', a: ['The Kakeya set conjecture in the plane (dimension 2)', 'Dimension 3', 'All dimensions', 'The restriction conjecture'], c: 0, e: 'Davies (1971): every Besicovitch set in R² has Hausdorff dimension 2.' },
+      { q: 'A function adapted to a δ-tube has Fourier transform concentrated on…', a: ['a dual tube of width 1/δ, oriented across the original', 'a point', 'a δ-ball', 'the whole plane uniformly'], c: 0, e: 'Uncertainty: δ in one direction becomes 1/δ in frequency, which is how waves and tubes meet.' },
+      { q: 'The Hausdorff dimension of a Besicovitch set in R² is…', a: ['2', '1', 'between 1 and 2 but less than 2', '0'], c: 0, e: 'Davies 1971. Zero area, full dimension.' },
+      { q: 'Which exponent in local smoothing is exactly energy conservation?', a: ['p = 2', 'p = 1', 'p = ∞', 'p = n'], c: 0, e: 'Plancherel gives zero loss at p = 2; everything else is harder.' },
+      { q: 'A successful Lean check of a theorem certifies that…', a: ['the formal statement follows from the library’s definitions and axioms', 'the informal conjecture is true exactly as mathematicians state it', 'the proof is elegant', 'the result has been peer reviewed'], c: 0, e: 'The kernel checks the formal statement. Whether the formal definitions match the classical objects is a separate human review.' },
+    ] },
+];
+const RECAP = [
+  'A periodic signal is a sum of sines; the 2-norm is conserved by the Fourier transform (Plancherel) and the hard problems live at p ≠ 2.',
+  'Width in time times width in frequency has a floor of 1/(4π); in space this makes δ-tubes dual to 1/δ-tubes, so waves decompose into tube-shaped packets.',
+  'A unit needle can turn in arbitrarily small area (Besicovitch); the limiting Besicovitch set has measure zero yet contains a segment in every direction.',
+  'Measure zero is not dimension zero: planar Besicovitch sets have dimension 2 (Davies 1971); the Kakeya set conjecture asks for dimension n in R<sup>n</sup>.',
+  'The Kakeya maximal conjecture says tubes in distinct directions cannot be compressed below about δ<sup>ε</sup> in measure; in the plane the sharp loss is 1/log(1/δ) (Córdoba).',
+  'Local smoothing (Sogge 1991) says averaging the wave propagator over a time interval gains almost 1/p of a derivative; it tops the chain local smoothing ⇒ Bochner–Riesz ⇒ restriction ⇒ Kakeya maximal ⇒ Kakeya set.',
+];
+const FRONTIER = [
+  'On October 26, 2026 OpenAI announced that an internal model had produced a manuscript titled “Local smoothing for the Euclidean wave equation” (dated October 25, 2026 in its public openai/math repository) claiming Sogge’s conjecture in every dimension n ≥ 2, with a Lean formalization. The named certified statements are <span class="mono">euclidean_local_smoothing</span>, <span class="mono">bochner_riesz</span>, <span class="mono">spherical_restriction</span>, <span class="mono">kakeya_maximal</span>, <span class="mono">kakeya</span> (every Kakeya set in R<sup>n</sup> has Hausdorff dimension n) and <span class="mono">stein_square</span>.',
+  'Status: these are unreviewed claims under independent examination by mathematicians. Nothing on this page should be read as saying the result is established.',
+  'What a Lean check does: it certifies that the formal statement follows from the library’s definitions and the axioms of Lean. What it does not do: it does not certify that those definitions match the classical objects (the half-wave propagator, Bessel potentials, Kakeya sets, the normalizations of the Fourier transform). Reviewers must read the definitions and compare them to the standard ones; the repository ships a comparator for exactly that purpose.',
+  'Before this claim, the known cases were: Kakeya set conjecture in R² (Davies 1971) and R³ (Wang and Zahl 2025); local smoothing in R<sup>2+1</sup> (Guth, Wang and Zhang 2020); restriction and Bochner–Riesz in the plane (Fefferman, Zygmund, Carleson and Sjölin, 1970s). Everything else in the chain was open in every higher dimension.',
+];
+const GLOSSARY = [
+  ['L<sup>p</sup> norm', 'The size of a function measured by ‖f‖<sub>p</sub> = (∫|f|<sup>p</sup>)<sup>1/p</sup>. Large p weights peaks more; p = ∞ is the maximum. Different p detect different kinds of concentration.'],
+  ['Fourier transform', 'f̂(ξ) = ∫ f(x) e<sup>−2πi x·ξ</sup> dx decomposes f into plane waves. On a period it becomes the Fourier series: coefficients of sines and cosines.'],
+  ['Plancherel theorem', '‖f̂‖<sub>2</sub> = ‖f‖<sub>2</sub>: the Fourier transform conserves energy. Parseval is the same statement for Fourier series.'],
+  ['Schwartz function', 'A smooth function that, with all its derivatives, decays faster than any power. The natural test class for Fourier analysis; the conjectures are stated for these functions first.'],
+  ['Besicovitch set', 'A set in R<sup>n</sup> containing a unit line segment in every direction yet having Lebesgue measure zero. Also called a Kakeya set.'],
+  ['Kakeya needle problem', 'Find the least area in which a unit segment can be rotated through 180° in the plane. Besicovitch: there is no least area; it can be made as small as you like.'],
+  ['Hausdorff dimension', 'A notion of size based on coverings by sets of varying diameter; it can take non-integer values and assigns dimension 2 to planar Besicovitch sets (Davies 1971).'],
+  ['Minkowski (box-counting) dimension', 'The exponent d with N(ε) ≈ ε<sup>−d</sup> boxes of side ε needed to cover the set. Easy to measure; agrees with Hausdorff dimension for the shapes in this game.'],
+  ['δ-tube', 'A rectangle (in the plane) or cylinder (in R<sup>n</sup>) of length 1 and width δ. Wave packets live on tubes, and tubes in different directions are the geometry behind every conjecture here.'],
+  ['Kakeya maximal function', 'K<sub>δ</sub>f(ω): the largest average of |f| over a δ-tube in direction ω. The conjecture bounds it in L<sup>n</sup> of the sphere of directions with only a δ<sup>−ε</sup> loss.'],
+  ['Restriction conjecture (Stein)', 'For an L<sup>p</sup> function with p close enough to 1, the Fourier transform has a meaningful restriction to the sphere, with an L<sup>q</sup> bound; equivalently, extensions of functions on the sphere obey L<sup>p</sup> estimates.'],
+  ['Bochner–Riesz means', 'Smoothly truncated Fourier integrals (1 − |ξ|²/R²)<sup>δ</sup><sub>+</sub> f̂(ξ). The conjecture gives the exact range of p and δ where they converge in L<sup>p</sup>.'],
+  ['Local smoothing', 'Sogge’s conjecture that integrating the wave solution over a time interval gains almost 1/p of a derivative compared with any fixed time. Proven in R<sup>2+1</sup> by Guth, Wang and Zhang (2020).'],
+  ['Wave equation', 'u<sub>tt</sub> = Δu. Disturbances travel at unit speed; a ring of radius r collapses to its center at time r, which is the focusing that local smoothing controls.'],
+  ['Lean', 'A proof assistant whose kernel checks that a formal proof establishes a formal statement from axioms. It does not check that the formal statement is the theorem a human meant.'],
+];
+const SOURCES = [
+  'T. Tao, “From rotating needles to stability of waves: emerging connections between combinatorics, analysis, and PDE”, Notices of the American Mathematical Society 48 (2001). The chain of implications, explained for non-specialists.',
+  'L. Guth, H. Wang, R. Zhang, “A sharp square function estimate for the cone in R³”, Annals of Mathematics 192 (2020). Local smoothing in 2+1 dimensions.',
+  'H. Wang, J. Zahl, “Volume estimates for unions of convex sets, and the Kakeya set conjecture in three dimensions”, arXiv preprint (2025).',
+  'R. O. Davies, “Some remarks on the Kakeya problem”, Proceedings of the Cambridge Philosophical Society 69 (1971). Dimension 2 in the plane.',
+  'T. Wolff, “An improved bound for Kakeya type maximal functions”, Revista Matemática Iberoamericana 11 (1995). The (n+2)/2 bound.',
+  'Z. Dvir, “On the size of Kakeya sets in finite fields”, Journal of the American Mathematical Society 22 (2009; preprint 2008).',
+  'C. D. Sogge, “Propagation of singularities and maximal functions in the plane”, Inventiones Mathematicae 104 (1991). The local smoothing conjecture.',
+  'A. S. Besicovitch, “On Kakeya’s problem and a similar one”, Mathematische Zeitschrift 27 (1928).',
+  'A. Córdoba, “The Kakeya maximal function and the spherical summation multipliers”, American Journal of Mathematics 99 (1977).',
+  'E. M. Stein, Harmonic Analysis: Real-Variable Methods, Orthogonality, and Oscillatory Integrals, Princeton University Press (1993).',
+];
+
+/* ================================================================== hero animation */
+let heroRaf = 0;
+function heroLoop() {
+  cancelAnimationFrame(heroRaf);
+  const c = $('hero'); if (!c) return; const g = c.getContext('2d'); const t0 = performance.now();
+  const A = 0.25, Pd = (t) => [2 * A * Math.cos(t) + A * Math.cos(2 * t), 2 * A * Math.sin(t) - A * Math.sin(2 * t)];
+  function frame(now) {
+    if (state.screen !== 'title') return;
+    const W = c.width, H = c.height, P = palette(), t = Math.max(0, (now - t0) / 1000);
+    g.clearRect(0, 0, W, H); g.fillStyle = P.bg; g.fillRect(0, 0, W, H);
+    const S = W / 2.2, cx = W / 2, cy = H / 2, px = (x, y) => [cx + x * S, cy - y * S];
+    // wave rings
+    for (let i = 0; i < 5; i++) { const r = ((t * 0.18 + i * 0.2) % 1) * 1.05; g.strokeStyle = withAlpha(P.accent, 0.35 * (1 - r)); g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, r * S, 0, TAU); g.stroke(); }
+    // deltoid
+    g.strokeStyle = withAlpha(P.fg, 0.35); g.lineWidth = 1.5; g.setLineDash([5, 5]); g.beginPath();
+    for (let i = 0; i <= 240; i++) { const q = Pd(TAU * i / 240), [x, y] = px(q[0], q[1]); if (i === 0) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke(); g.setLineDash([]);
+    // swept trail
+    const u = (t * 0.5) % TAU;
+    g.strokeStyle = withAlpha(P.accent, 0.08); g.lineWidth = 2;
+    for (let k = 0; k < 60; k++) { const uu = u - k * 0.02; const e0 = Pd(-uu / 2), e1 = Pd(Math.PI - uu / 2); const [x1, y1] = px(e0[0], e0[1]), [x2, y2] = px(e1[0], e1[1]); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+    const e0 = Pd(-u / 2), e1 = Pd(Math.PI - u / 2); const [x1, y1] = px(e0[0], e0[1]), [x2, y2] = px(e1[0], e1[1]);
+    g.strokeStyle = P.accent2; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+    // fourier ribbon at the bottom
+    g.strokeStyle = withAlpha(P.accent, 0.8); g.lineWidth = 2; g.beginPath();
+    for (let i = 0; i <= 200; i++) { const x = i / 200 * W; const ph = i / 200 * TAU * 2 + t; let v = 0; for (let n = 1; n <= 7; n += 2) v += Math.sin(n * ph) / n; const y = H * 0.9 - v * H * 0.05; if (i === 0) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
+    g.fillStyle = P.muted; g.font = `12px ${cssVar('--font-mono')}`; g.textAlign = 'center'; g.fillText('a needle turning inside the deltoid, area π/8 · Besicovitch did better', W / 2, H - 14);
+    heroRaf = requestAnimationFrame(frame);
+  }
+  heroRaf = requestAnimationFrame(frame);
+}
+
+/* ================================================================== boot */
+function gotoMap() { if (current && current.destroy) current.destroy(); current = null; cancelAnimationFrame(rafId); renderMap(); showScreen('map'); }
+function completeLevel(starsOverride) {
+  if (state.screen !== 'level' || !current) return;
+  const stars = typeof starsOverride === 'number' ? starsOverride : current.stars();
+  closeModal(); finishLevel(stars, 0, 0);
+}
+function boot(data) {
+  load();
+  if (data && data.state) { try { Object.assign(state, data.state); } catch (e) {} }
+  $('btn-play-sound').addEventListener('click', () => { if (Audio.init()) { state.sound = true; Audio.setMusic(state.music); Audio.setSfx(state.sfx); Audio.sfx('unlock'); } else toast('Audio is not available in this browser; playing muted.'); renderMap(); showScreen('map'); });
+  $('btn-play-muted').addEventListener('click', () => { state.sound = false; renderMap(); showScreen('map'); });
+  $('map-notes').addEventListener('click', () => { Audio.sfx('click'); openNotes('notes'); });
+  $('hud-notes').addEventListener('click', () => { Audio.sfx('click'); openNotes('notes'); });
+  $('map-music').addEventListener('click', toggleMusic); $('hud-music').addEventListener('click', toggleMusic);
+  $('map-sfx').addEventListener('click', toggleSfx); $('hud-sfx').addEventListener('click', toggleSfx);
+  let resetArmed = false;
+  $('map-reset').addEventListener('click', (e) => { if (!resetArmed) { resetArmed = true; e.target.textContent = 'Tap again to confirm reset'; setTimeout(() => { resetArmed = false; e.target.textContent = 'Reset progress'; }, 3000); return; } resetArmed = false; e.target.textContent = 'Reset progress'; resetProgress(); });
+  $('hud-map').addEventListener('click', () => { Audio.sfx('click'); gotoMap(); });
+  $('btn-finish').addEventListener('click', () => { if (!current) return; Audio.sfx('click'); runQuiz(LEVELS[state.level], current.stars()); });
+  $('btn-skip').addEventListener('click', () => { if (!current) return; Audio.sfx('click'); state.done[state.level] = true; save(); const next = state.level + 1; if (next < LEVEL_COUNT) startLevel(next); else gotoMap(); });
+  const ro = new ResizeObserver(() => { if (state.screen === 'level' && current) resizeBoard(); });
+  ro.observe($('board').parentElement);
+  if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (state.screen === 'level' && current && current.draw) current.draw(0); }); } catch (e) {} }
+  renderMap();
+  if (data && data.state && data.state.screen === 'level' && typeof data.state.level === 'number') { startLevel(clamp(data.state.level, 0, LEVEL_COUNT - 1)); }
+  else if (data && data.state && data.state.screen === 'map') showScreen('map');
+  else showScreen('title');
+  window.__game = { gotoLevel: (i) => startLevel(clamp(i, 0, LEVEL_COUNT - 1)), completeLevel, state, current: () => current, Audio, map: gotoMap, openNotes, LEVELS };
+}
+try { window.claude?.hot?.snapshot?.(() => ({ state: { screen: state.screen, level: state.level, score: state.score, streak: state.streak, stars: state.stars, done: state.done, music: state.music, sfx: state.sfx } })); } catch (e) {}
+if (window.claude?.hot?.ready) window.claude.hot.ready(boot); else boot(window.claude?.hot?.data ?? {});
+})();
+</script>

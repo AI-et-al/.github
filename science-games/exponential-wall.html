@@ -1,0 +1,1429 @@
+<title>The Exponential Wall</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&family=Silkscreen:wght@400;700&display=swap">
+<style>
+/* Layout concept: a brutalist arcade cabinet. One column, a sticky pixel HUD, a board that is
+   the only object with a hard border, and a reading card under it. Tangerine is the only
+   decorative accent; mint and rose are reserved for truth values. */
+:root {
+  --bg: #f3efe6;
+  --bg2: #e7e1d3;
+  --panel: #fbf9f4;
+  --fg: #22262e;
+  --fg-dim: #5b6270;
+  --line: #cbc3b3;
+  --accent: #d4520a;
+  --accent-soft: #f6dcc9;
+  --accent-fg: #ffffff;
+  --true: #0f8a6a;
+  --true-soft: #d6f1e8;
+  --false: #b2445a;
+  --false-soft: #f4dbe1;
+  --warn: #9a6b00;
+  --shadow: 0 2px 0 #cbc3b3;
+  --font-display: "Silkscreen", "Courier New", monospace;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", Arial, sans-serif;
+  --font-code: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #23272e; --bg2: #1b1e24; --panel: #2c313a; --fg: #f2efe8; --fg-dim: #aab0bb;
+    --line: #3d434e; --accent: #ff7a1a; --accent-soft: #4a2c14; --accent-fg: #1a1a1a;
+    --true: #4fe3b0; --true-soft: #1f4a3d; --false: #e8728c; --false-soft: #4d2630;
+    --warn: #ffcf5a; --shadow: 0 2px 0 #13161b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #23272e; --bg2: #1b1e24; --panel: #2c313a; --fg: #f2efe8; --fg-dim: #aab0bb;
+  --line: #3d434e; --accent: #ff7a1a; --accent-soft: #4a2c14; --accent-fg: #1a1a1a;
+  --true: #4fe3b0; --true-soft: #1f4a3d; --false: #e8728c; --false-soft: #4d2630;
+  --warn: #ffcf5a; --shadow: 0 2px 0 #13161b; color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 17px; line-height: 1.45; margin: 0; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg2); }
+* { box-sizing: border-box; }
+.app {
+  min-height: 100%;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 32px;
+  max-width: 1080px; margin: 0 auto;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.02em; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(26px, 6vw, 44px); }
+h2 { font-size: clamp(16px, 3.4vw, 22px); }
+h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-dim); font-family: var(--font-body); font-weight: 700; }
+p { margin: 0 0 10px; max-width: 68ch; }
+code, .code { font-family: var(--font-code); font-size: 0.92em; }
+a { color: var(--accent); }
+button { font: inherit; color: inherit; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 8px 16px; border: 2px solid var(--fg); background: var(--panel); color: var(--fg);
+  border-radius: 4px; cursor: pointer; box-shadow: var(--shadow); user-select: none; text-decoration: none;
+}
+.btn:hover { background: var(--bg2); }
+.btn:active { transform: translateY(2px); box-shadow: none; }
+.btn:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn-primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
+.btn-primary:hover { filter: brightness(1.08); background: var(--accent); }
+.btn-small { min-height: 34px; padding: 4px 10px; font-size: 14px; }
+.btn-ghost { border-color: var(--line); box-shadow: none; background: transparent; }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.btn.is-true { border-color: var(--true); color: var(--true); }
+.btn.is-false { border-color: var(--false); color: var(--false); }
+.pixel { font-family: var(--font-display); }
+.dim { color: var(--fg-dim); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.stack { display: grid; gap: 12px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Screens */
+.screen { padding-block: 20px 0; }
+.hero { display: grid; gap: 18px; padding-block: 28px 12px; }
+.hero .promise { font-size: 19px; max-width: 56ch; }
+.hero ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.hero-wall { width: 100%; height: 140px; display: block; border: 2px solid var(--fg); background: var(--bg2); }
+.title-note { font-size: 14px; color: var(--fg-dim); }
+
+/* HUD */
+.hud {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+  background: var(--bg2); border-bottom: 2px solid var(--fg); padding: 8px 10px; margin: 0 -2px 14px;
+  font-family: var(--font-display); font-size: 12px;
+}
+.hud .hud-name { flex: 1 1 160px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud .stat { display: inline-flex; gap: 6px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.hud .stat b { color: var(--accent); font-weight: 400; }
+.hud .hud-controls { display: flex; gap: 6px; }
+.hud .btn { min-height: 32px; padding: 2px 8px; font-family: var(--font-display); font-size: 11px; box-shadow: none; }
+.hud .btn[aria-pressed="false"] { opacity: 0.55; text-decoration: line-through; }
+.progress { height: 8px; background: var(--bg2); border: 2px solid var(--fg); margin: 0 0 14px; }
+.progress > div { height: 100%; background: var(--accent); transition: width 0.3s; width: 0%; }
+@media (prefers-reduced-motion: reduce) { .progress > div { transition: none; } }
+
+/* Level layout */
+.level-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 900px) { .level-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); align-items: start; } }
+.board { min-width: 0; border: 2px solid var(--fg); background: var(--panel); padding: 12px; box-shadow: var(--shadow); }
+.board canvas { display: block; width: 100%; max-width: 100%; height: auto; background: var(--bg2); }
+.card { min-width: 0; display: grid; gap: 10px; align-content: start; }
+.card .idea { font-size: 18px; border-left: 6px solid var(--accent); padding-left: 12px; }
+.card .goal { font-size: 15px; color: var(--fg-dim); }
+details { border-top: 1px solid var(--line); padding-top: 8px; }
+details summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; gap: 8px; align-items: center; }
+details summary::before { content: "+"; font-family: var(--font-display); color: var(--accent); }
+details[open] summary::before { content: "-"; }
+details .deeper { padding-top: 8px; font-size: 15.5px; }
+.status { min-height: 24px; font-size: 15px; color: var(--fg-dim); }
+.status.good { color: var(--true); }
+.status.bad { color: var(--false); }
+.board-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+.board-head .pixel { font-size: 12px; }
+
+/* Switches, chips, lamps */
+.switches { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.switch { min-width: 54px; min-height: 48px; border: 2px solid var(--fg); background: var(--bg2); border-radius: 4px; cursor: pointer; font-family: var(--font-code); font-weight: 600; display: grid; place-items: center; gap: 2px; padding: 4px 6px; box-shadow: var(--shadow); }
+.switch:active { transform: translateY(2px); box-shadow: none; }
+.switch small { font-family: var(--font-display); font-size: 9px; letter-spacing: 0.05em; }
+.switch[aria-pressed="true"] { background: var(--true-soft); border-color: var(--true); color: var(--true); }
+.switch[aria-pressed="false"] { background: var(--false-soft); border-color: var(--false); color: var(--false); }
+.switch.unset { background: var(--bg2); border-color: var(--line); color: var(--fg-dim); }
+.lamps { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.lamp { border: 2px solid var(--line); border-radius: 4px; padding: 6px 8px; display: flex; gap: 4px; align-items: center; justify-content: center; flex-wrap: wrap; background: var(--bg2); position: relative; min-height: 44px; font-family: var(--font-code); font-size: 14px; }
+.lamp.lit { border-color: var(--true); background: var(--true-soft); box-shadow: 0 0 0 2px var(--true-soft), 0 0 12px var(--true); }
+.lamp.dead { border-color: var(--false); background: var(--false-soft); }
+.lamp .or { color: var(--fg-dim); font-size: 12px; }
+.chip { padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line); background: var(--panel); }
+.chip.t { border-color: var(--true); color: var(--true); }
+.chip.f { border-color: var(--false); color: var(--false); text-decoration: line-through; }
+.chip.u { color: var(--fg-dim); }
+.chip.clickable { cursor: pointer; }
+.chip.clickable:hover { border-color: var(--accent); }
+
+/* Map */
+.map { display: grid; gap: 14px; }
+.map-canvas { width: 100%; height: 120px; display: block; border: 2px solid var(--fg); background: var(--bg2); }
+.map-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.map-item { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 2px solid var(--line); background: var(--panel); padding: 10px 12px; min-height: 64px; }
+.map-item.done { border-color: var(--true); }
+.map-item.next { border-color: var(--accent); box-shadow: var(--shadow); }
+.map-item .num { font-family: var(--font-display); font-size: 18px; color: var(--accent); text-align: center; }
+.map-item .name { font-weight: 700; }
+.map-item .sub { font-size: 14px; color: var(--fg-dim); }
+.map-item .stars { font-family: var(--font-display); font-size: 12px; color: var(--warn); letter-spacing: 0.1em; white-space: nowrap; }
+.map-item.locked { opacity: 0.6; }
+
+/* Modal */
+.modal { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.55); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-left, 0px)); }
+.modal-box { width: min(620px, 100%); max-height: 92vh; overflow: auto; background: var(--panel); color: var(--fg); border: 2px solid var(--fg); box-shadow: 6px 6px 0 var(--accent); padding: 18px; display: grid; gap: 12px; }
+.choices { display: grid; gap: 8px; }
+.choice { text-align: left; justify-content: flex-start; }
+.choice.correct { border-color: var(--true); background: var(--true-soft); }
+.choice.wrong { border-color: var(--false); background: var(--false-soft); }
+.why { font-size: 15px; color: var(--fg-dim); min-height: 22px; }
+.result-stars { font-family: var(--font-display); font-size: 28px; color: var(--warn); letter-spacing: 0.15em; }
+.modal-box > *, .recap, .frontier, .pair { min-width: 0; }
+code, .code, .frontier p, .recap li, .pair pre { overflow-wrap: anywhere; }
+
+/* Drawer */
+.drawer { position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,0.5); }
+.drawer-panel { position: absolute; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--panel); color: var(--fg); border-left: 2px solid var(--fg); overflow: auto; padding: 18px max(16px, env(safe-area-inset-right, 0px)) 24px 18px; display: grid; gap: 14px; align-content: start; }
+.drawer dl { margin: 0; display: grid; gap: 8px; }
+.drawer dt { font-weight: 700; }
+.drawer dd { margin: 0 0 4px; font-size: 15px; color: var(--fg-dim); }
+.drawer ol { padding-left: 20px; font-size: 14.5px; display: grid; gap: 6px; }
+.tabs { display: flex; gap: 6px; }
+.tabs .btn[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+
+/* Level specific */
+.rate-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+input[type=range] { accent-color: var(--accent); width: min(100%, 320px); }
+.bigstat { font-family: var(--font-display); font-size: clamp(14px, 3vw, 20px); color: var(--accent); font-variant-numeric: tabular-nums; word-break: break-all; }
+.counter { font-family: var(--font-code); font-size: clamp(11px, 2.4vw, 15px); letter-spacing: 0.05em; word-break: break-all; }
+.stackview { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--font-code); font-size: 13px; }
+.frame { border: 2px solid var(--accent); padding: 2px 6px; background: var(--accent-soft); }
+.frame.flipped { border-style: dashed; }
+.trail-unit { border: 1px dashed var(--line); padding: 2px 6px; }
+.race-track { display: grid; gap: 6px; }
+.race-row { display: grid; grid-template-columns: minmax(96px, 150px) minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 14px; font-variant-numeric: tabular-nums; }
+.race-bar { height: 18px; background: var(--bg2); border: 1px solid var(--line); position: relative; }
+.race-bar > div { height: 100%; background: var(--accent); width: 0; transition: width 1.2s ease-out; }
+@media (prefers-reduced-motion: reduce) { .race-bar > div { transition: none; } }
+.order-slot { display: flex; flex-wrap: wrap; gap: 6px; min-height: 44px; border: 2px dashed var(--line); padding: 6px; }
+.order-slot .chip { font-size: 14px; padding: 6px 8px; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.gadget { border: 2px solid var(--line); padding: 8px 10px; background: var(--bg2); cursor: pointer; border-radius: 4px; }
+.gadget[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.tree { font-family: var(--font-code); font-size: 13.5px; }
+.tree ul { list-style: none; margin: 0; padding-left: 16px; border-left: 1px solid var(--line); }
+.tree > ul { padding-left: 0; border-left: none; }
+.tree li { margin: 6px 0; }
+.node { border: 1px solid var(--line); padding: 6px 8px; background: var(--bg2); display: inline-grid; gap: 4px; max-width: 100%; }
+.node.leaf-ok { border-color: var(--true); }
+.node.leaf-zero { border-color: var(--false); }
+.node.open { border-color: var(--accent); }
+.node .cl { word-break: break-word; }
+.node .cnt { font-family: var(--font-display); font-size: 11px; color: var(--accent); }
+.dominoes { display: grid; gap: 10px; }
+.domino { border: 2px solid var(--fg); background: var(--bg2); padding: 10px; display: grid; gap: 8px; }
+.domino.fell { border-color: var(--false); background: var(--false-soft); transform: rotate(-1deg); }
+.domino.stands { border-color: var(--true); }
+.domino.unsupported { border-color: var(--warn); border-style: dashed; }
+.domino .verdict { font-size: 14px; color: var(--fg-dim); }
+.pair { border: 2px solid var(--line); padding: 10px; display: grid; gap: 8px; background: var(--bg2); }
+.pair pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: var(--font-code); font-size: 13px; background: var(--panel); border: 1px solid var(--line); padding: 8px; }
+.recap { display: grid; gap: 16px; }
+.recap ul { padding-left: 20px; display: grid; gap: 6px; }
+.frontier { border: 2px solid var(--accent); padding: 14px; background: var(--panel); display: grid; gap: 8px; }
+.kbd { font-family: var(--font-code); font-size: 12px; border: 1px solid var(--line); padding: 0 4px; border-radius: 3px; }
+canvas.fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 30; }
+</style>
+<div class="app" id="app">
+  <!-- Title screen -->
+  <section class="screen" id="screen-title">
+    <div class="hero">
+      <canvas class="hero-wall" id="hero-wall" width="1000" height="140" aria-hidden="true"></canvas>
+      <h1>The Exponential Wall</h1>
+      <p class="promise">Learn what P vs NP, SAT, and the Exponential Time Hypothesis really say by solving puzzles, in about 25 minutes.</p>
+      <div class="row">
+        <button class="btn btn-primary" id="btn-play-sound">Play with sound</button>
+        <button class="btn" id="btn-play-muted">Play muted</button>
+      </div>
+      <div>
+        <h3>What you'll learn</h3>
+        <ul>
+          <li>What a 3-SAT formula is, by satisfying a dozen of them by hand.</li>
+          <li>Why 2^n is a wall that faster hardware cannot climb.</li>
+          <li>How real solvers prune the search tree, and why the worst case stays exponential.</li>
+          <li>The difference between polynomial, subexponential, and 2^(n^ε) running times.</li>
+          <li>What falls, and what does not, if the Exponential Time Hypothesis is false.</li>
+        </ul>
+      </div>
+      <p class="title-note">Seven short levels. Progress is saved in this browser. Keyboard works everywhere; digits toggle switches.</p>
+    </div>
+  </section>
+
+  <!-- Map screen -->
+  <section class="screen" id="screen-map" hidden>
+    <div class="hud" id="hud-map">
+      <span class="hud-name">Level map</span>
+      <span class="stat">Score <b id="map-score">0</b></span>
+      <span class="hud-controls">
+        <button class="btn" id="map-music" aria-pressed="true">Music</button>
+        <button class="btn" id="map-sfx" aria-pressed="true">SFX</button>
+        <button class="btn" id="map-notes">Notes</button>
+      </span>
+    </div>
+    <div class="map">
+      <canvas class="map-canvas" id="map-canvas" width="1000" height="120" aria-hidden="true"></canvas>
+      <ol class="map-list" id="map-list"></ol>
+      <div class="row">
+        <button class="btn btn-ghost btn-small" id="btn-skip">Skip ahead: unlock every level</button>
+        <button class="btn btn-ghost btn-small" id="btn-reset">Reset progress</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Level screen -->
+  <section class="screen" id="screen-level" hidden>
+    <div class="hud" id="hud-level">
+      <span class="hud-name" id="hud-name">Level</span>
+      <span class="stat">Score <b id="hud-score">0</b></span>
+      <span class="stat">Streak <b id="hud-streak">0</b></span>
+      <span class="stat" id="hud-timer-wrap" hidden>Time <b id="hud-timer">0:00</b></span>
+      <span class="hud-controls">
+        <button class="btn" id="lvl-music" aria-pressed="true">Music</button>
+        <button class="btn" id="lvl-sfx" aria-pressed="true">SFX</button>
+        <button class="btn" id="lvl-notes">Notes</button>
+        <button class="btn" id="lvl-map">Map</button>
+      </span>
+    </div>
+    <div class="progress" aria-hidden="true"><div id="level-progress"></div></div>
+    <div class="level-grid">
+      <div class="board" id="board"></div>
+      <aside class="card" id="card">
+        <h2 id="card-title"></h2>
+        <p class="idea" id="card-idea"></p>
+        <p class="goal" id="card-goal"></p>
+        <details id="card-details">
+          <summary>Deeper</summary>
+          <div class="deeper" id="card-deeper"></div>
+        </details>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<div id="modal-root"></div>
+<div id="drawer-root"></div>
+<canvas class="fx" id="fx" aria-hidden="true"></canvas>
+<div class="sr-only" aria-live="polite" id="live"></div>
+<script>
+(() => {
+'use strict';
+
+/* ------------------------------------------------------------------ */
+/* Audio engine: chiptune. Square/triangle leads, noise percussion.    */
+/* ------------------------------------------------------------------ */
+const Audio = (() => {
+  let ctx = null, master = null, musicBus = null, sfxBus = null, comp = null, filter = null;
+  let musicOn = true, sfxOn = true, noiseBuf = null;
+  let schedTimer = null, nextTime = 0, step = 0, bar = 0;
+  let tempo = 104, density = 0.6, brightness = 1800, levelSeed = 1;
+  let lastTick = 0;
+  const A = 110; // A2
+  // A minor pentatonic degrees in semitones from A: 0 3 5 7 10
+  const PENT = [0, 3, 5, 7, 10];
+  const ROOTS = [0, -4, -2, -5]; // A, F, G, E (relative semitones)
+  const f = (semi, oct = 0) => A * Math.pow(2, (semi + 12 * oct) / 12);
+  function init() {
+    if (ctx) return true;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      ctx = new AC();
+      master = ctx.createGain(); master.gain.value = 0.5;
+      comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.12;
+      musicBus = ctx.createGain(); musicBus.gain.value = musicOn ? 0.25 : 0;
+      filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = brightness; filter.Q.value = 0.7;
+      sfxBus = ctx.createGain(); sfxBus.gain.value = sfxOn ? 0.6 : 0;
+      musicBus.connect(filter); filter.connect(comp); sfxBus.connect(comp); comp.connect(master); master.connect(ctx.destination);
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      return true;
+    } catch (e) { ctx = null; return false; }
+  }
+  function resume() { if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {}); }
+  function setMusic(on) { musicOn = on; if (musicBus && ctx) musicBus.gain.setTargetAtTime(on ? 0.25 : 0, ctx.currentTime, 0.05); if (on) startMusic(); }
+  function setSfx(on) { sfxOn = on; if (sfxBus && ctx) sfxBus.gain.setTargetAtTime(on ? 0.6 : 0, ctx.currentTime, 0.02); }
+  function setMood({ tempo: t, density: d, brightness: b, seed } = {}) {
+    if (t) tempo = Math.max(60, Math.min(180, t));
+    if (d !== undefined) density = Math.max(0.1, Math.min(1, d));
+    if (b && filter && ctx) { brightness = b; filter.frequency.setTargetAtTime(b, ctx.currentTime, 0.3); }
+    if (seed) levelSeed = seed;
+  }
+  // tone helper
+  function tone({ type = 'square', freq = 440, t = 0, dur = 0.1, vol = 0.2, bus = sfxBus, slide = null, attack = 0.005 }) {
+    if (!ctx) return;
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, slide), t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function noise({ t = 0, dur = 0.05, vol = 0.15, bus = sfxBus, hp = 3000, bp = null, sweepTo = null }) {
+    if (!ctx || !noiseBuf) return;
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const g = ctx.createGain(); const fl = ctx.createBiquadFilter();
+    if (bp) { fl.type = 'bandpass'; fl.frequency.setValueAtTime(bp, t); fl.Q.value = 1.2; if (sweepTo) fl.frequency.exponentialRampToValueAtTime(sweepTo, t + dur); }
+    else { fl.type = 'highpass'; fl.frequency.value = hp; }
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(fl); fl.connect(g); g.connect(bus); s.start(t); s.stop(t + dur + 0.02);
+  }
+  const SFX = {
+    click: () => tone({ type: 'square', freq: 880, dur: 0.045, vol: 0.12 }),
+    hover: () => tone({ type: 'triangle', freq: 1200, dur: 0.02, vol: 0.03 }),
+    good: () => { const t = ctx.currentTime; tone({ type: 'square', freq: 660, t, dur: 0.08, vol: 0.14 }); tone({ type: 'square', freq: 990, t: t + 0.08, dur: 0.12, vol: 0.14 }); },
+    bad: () => { const t = ctx.currentTime; tone({ type: 'sawtooth', freq: 140, t, dur: 0.22, vol: 0.16, slide: 90 }); tone({ type: 'square', freq: 70, t, dur: 0.22, vol: 0.08, slide: 50 }); },
+    tick: () => { const now = performance.now(); if (now - lastTick < 50) return; lastTick = now; tone({ type: 'triangle', freq: 2000, dur: 0.015, vol: 0.08 }); },
+    whoosh: () => noise({ dur: 0.3, vol: 0.18, bp: 300, sweepTo: 3000 }),
+    fanfare: () => { const t = ctx.currentTime; [0, 4, 7, 12, 16].forEach((s, i) => tone({ type: 'square', freq: f(3 + s, 2), t: t + i * 0.09, dur: i === 4 ? 0.35 : 0.12, vol: 0.14 })); },
+    unlock: () => tone({ type: 'sine', freq: 300, dur: 0.4, vol: 0.16, slide: 1200 }),
+    star: () => { const t = ctx.currentTime; tone({ type: 'triangle', freq: 1320, t, dur: 0.3, vol: 0.14 }); tone({ type: 'sine', freq: 2640, t, dur: 0.25, vol: 0.05 }); }
+  };
+  function sfx(name) { if (!ctx || !sfxOn || !SFX[name]) return; try { SFX[name](); } catch (e) { /* no-op */ } }
+  // Procedural music scheduler
+  function rnd(i) { const x = Math.sin(i * 127.1 + levelSeed * 311.7) * 43758.5453; return x - Math.floor(x); }
+  function scheduleStep(stepIdx, t) {
+    const beatLen = 60 / tempo; const eighth = beatLen / 2;
+    const barPos = stepIdx % 8; const barIdx = Math.floor(stepIdx / 8);
+    const root = ROOTS[Math.floor(barIdx / 2) % ROOTS.length];
+    // bass on triangle: beats 1 and 3, plus a pickup
+    if (barPos === 0 || barPos === 4) tone({ type: 'triangle', freq: f(root, 0), t, dur: eighth * 1.6, vol: 0.22, bus: musicBus, attack: 0.01 });
+    if (barPos === 7 && rnd(stepIdx) < 0.5) tone({ type: 'triangle', freq: f(root + 7, 0), t, dur: eighth * 0.8, vol: 0.14, bus: musicBus });
+    // arpeggio on square, pentatonic relative to root, every eighth with density gating
+    if (rnd(stepIdx * 3 + 1) < density) {
+      const deg = PENT[Math.floor(rnd(stepIdx * 7 + 2) * PENT.length)];
+      const oct = 2 + (rnd(stepIdx * 11 + 3) < 0.3 ? 1 : 0);
+      tone({ type: 'square', freq: f(root + deg, oct), t, dur: eighth * 0.55, vol: 0.09, bus: musicBus });
+    }
+    // lead melody: slow, every other bar, random walk over the scale
+    if (barIdx % 2 === 1 && (barPos === 0 || barPos === 3 || barPos === 6) && rnd(stepIdx * 5 + 9) < 0.8) {
+      const deg = PENT[Math.floor(rnd(barIdx * 13 + barPos) * PENT.length)];
+      tone({ type: 'triangle', freq: f(root + deg + 12, 2), t, dur: eighth * 2.2, vol: 0.12, bus: musicBus, attack: 0.02 });
+    }
+    // percussion: hat on every eighth, kick on 1 and 3, snare on 2 and 4
+    noise({ t, dur: 0.03, vol: barPos % 2 === 0 ? 0.05 : 0.03, bus: musicBus, hp: 6000 });
+    if (barPos === 0 || barPos === 4) tone({ type: 'sine', freq: 160, t, dur: 0.12, vol: 0.3, bus: musicBus, slide: 45 });
+    if (barPos === 2 || barPos === 6) noise({ t, dur: 0.09, vol: 0.12, bus: musicBus, hp: 1500 });
+  }
+  function scheduler() {
+    if (!ctx || !musicOn) return;
+    const lookahead = 0.12;
+    while (nextTime < ctx.currentTime + lookahead) {
+      scheduleStep(step, nextTime);
+      nextTime += (60 / tempo) / 2; step++;
+    }
+  }
+  function startMusic() {
+    if (!ctx || schedTimer) return;
+    nextTime = ctx.currentTime + 0.1; step = 0;
+    schedTimer = setInterval(scheduler, 25);
+  }
+  function stopMusic() { if (schedTimer) { clearInterval(schedTimer); schedTimer = null; } }
+  return { init, resume, setMusic, setSfx, sfx, setMood, startMusic, stopMusic, get ready() { return !!ctx; } };
+})();
+
+/* ------------------------------------------------------------------ */
+/* Core shell: state, persistence, screens, HUD, FX, map, quick checks */
+/* ------------------------------------------------------------------ */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') node.className = v;
+    else if (k === 'html') node.innerHTML = v;
+    else if (k === 'text') node.textContent = v;
+    else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+    else if (k === 'dataset') Object.assign(node.dataset, v);
+    else node.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of children.flat()) { if (c === null || c === undefined || c === false) continue; node.append(c instanceof Node ? c : document.createTextNode(String(c))); }
+  return node;
+}
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmtInt = (n) => n.toLocaleString('en-US');
+const pow2 = (n) => Math.pow(2, n);
+
+const state = {
+  screen: 'title', level: 1, score: 0, streak: 0, bestStreak: 0,
+  stars: {}, completed: {}, unlockedAll: false, music: true, sfx: true, soundStarted: false,
+  timerStart: null, timerId: null
+};
+const STORE_KEY = 'exponential-wall.v1';
+function save() {
+  try {
+    const { score, stars, completed, unlockedAll, music, sfx, bestStreak } = state;
+    localStorage.setItem(STORE_KEY, JSON.stringify({ score, stars, completed, unlockedAll, music, sfx, bestStreak }));
+  } catch (e) { /* storage unavailable */ }
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY); if (!raw) return;
+    const d = JSON.parse(raw);
+    Object.assign(state, {
+      score: d.score || 0, stars: d.stars || {}, completed: d.completed || {}, unlockedAll: !!d.unlockedAll,
+      music: d.music !== false, sfx: d.sfx !== false, bestStreak: d.bestStreak || 0
+    });
+  } catch (e) { /* ignore */ }
+}
+function resetProgress() {
+  state.score = 0; state.streak = 0; state.bestStreak = 0; state.stars = {}; state.completed = {}; state.unlockedAll = false;
+  save(); renderMap(); live('Progress reset.');
+}
+function live(msg) { const n = $('#live'); if (n) { n.textContent = ''; setTimeout(() => { n.textContent = msg; }, 20); } }
+
+const LEVELS = [];
+let current = null; // { level, handle }
+
+/* FX: confetti particles on a fixed canvas */
+const FX = (() => {
+  const c = $('#fx'); const g = c.getContext('2d'); let parts = []; let raf = null;
+  function resize() { c.width = Math.floor(innerWidth * devicePixelRatio); c.height = Math.floor(innerHeight * devicePixelRatio); }
+  addEventListener('resize', resize); resize();
+  function burst(x = innerWidth / 2, y = innerHeight / 3, n = 60) {
+    const count = reducedMotion() ? Math.min(12, n) : n;
+    const cols = [cssVar('--accent'), cssVar('--true'), cssVar('--warn'), cssVar('--fg')];
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2, s = 3 + Math.random() * 7;
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 4, life: 1, col: cols[i % cols.length], w: 4 + Math.random() * 6, rot: Math.random() * 6 });
+    }
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function tick() {
+    g.clearRect(0, 0, c.width, c.height); const dpr = devicePixelRatio;
+    parts = parts.filter(p => p.life > 0);
+    for (const p of parts) {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.vx *= 0.99; p.life -= 0.018; p.rot += 0.1;
+      g.save(); g.globalAlpha = Math.max(0, p.life); g.translate(p.x * dpr, p.y * dpr); g.rotate(p.rot);
+      g.fillStyle = p.col; g.fillRect(-p.w / 2 * dpr, -p.w / 4 * dpr, p.w * dpr, p.w / 2 * dpr); g.restore();
+    }
+    if (parts.length) raf = requestAnimationFrame(tick); else { raf = null; g.clearRect(0, 0, c.width, c.height); }
+  }
+  return { burst };
+})();
+
+/* Wall drawing shared by hero and map */
+function drawWall(canvas, n, opts = {}) {
+  const g = canvas.getContext('2d'); const W = canvas.width, H = canvas.height;
+  g.fillStyle = cssVar('--bg2'); g.fillRect(0, 0, W, H);
+  const perRow = opts.perRow || 64; const blocks = pow2(n); const rows = Math.ceil(blocks / perRow);
+  const bw = W / perRow; const bh = Math.max(3, Math.min(14, bw * 0.75));
+  const visibleRows = Math.min(rows, Math.floor(H / bh));
+  g.fillStyle = cssVar('--accent');
+  const stroke = cssVar('--bg2');
+  for (let r = 0; r < visibleRows; r++) {
+    const y = H - (r + 1) * bh; const inRow = (r === rows - 1) ? (blocks - r * perRow) : perRow;
+    for (let i = 0; i < inRow; i++) { g.fillRect(i * bw + 0.5, y + 0.5, bw - 1, bh - 1); }
+  }
+  g.strokeStyle = stroke;
+  if (opts.label !== false) {
+    const text = rows > visibleRows ? `2^${n} = ${fmtInt(blocks)} blocks in ${fmtInt(rows)} rows: the wall leaves the frame` : `2^${n} = ${fmtInt(blocks)} blocks`;
+    const fs = Math.max(12, Math.min(22, W / 45)); g.font = `${fs}px "Silkscreen", monospace`; g.textAlign = 'left'; g.textBaseline = 'middle';
+    const tw = g.measureText(text).width; g.fillStyle = cssVar('--panel'); g.fillRect(8, 8, tw + 16, fs + 12);
+    g.strokeStyle = cssVar('--fg'); g.lineWidth = 2; g.strokeRect(8, 8, tw + 16, fs + 12);
+    g.fillStyle = cssVar('--fg'); g.fillText(text, 16, 8 + (fs + 12) / 2); g.textBaseline = 'alphabetic';
+  }
+}
+
+/* Screens */
+function showScreen(name) {
+  state.screen = name;
+  for (const id of ['title', 'map', 'level']) { const s = $('#screen-' + id); s.hidden = id !== name; }
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+function syncAudioButtons() {
+  for (const id of ['#map-music', '#lvl-music']) { const b = $(id); if (b) b.setAttribute('aria-pressed', String(state.music)); }
+  for (const id of ['#map-sfx', '#lvl-sfx']) { const b = $(id); if (b) b.setAttribute('aria-pressed', String(state.sfx)); }
+}
+function toggleMusic() { state.music = !state.music; Audio.setMusic(state.music); syncAudioButtons(); save(); Audio.sfx('click'); }
+function toggleSfx() { state.sfx = !state.sfx; Audio.setSfx(state.sfx); syncAudioButtons(); save(); Audio.sfx('click'); }
+function ensureAudio() {
+  if (!state.soundStarted) return;
+  if (Audio.init()) { Audio.resume(); Audio.setMusic(state.music); Audio.setSfx(state.sfx); if (state.music) Audio.startMusic(); }
+}
+
+function updateHud() {
+  $('#hud-score').textContent = fmtInt(state.score); $('#map-score').textContent = fmtInt(state.score);
+  $('#hud-streak').textContent = String(state.streak);
+}
+function addScore(n) { state.score += n; updateHud(); }
+function streakUp() { state.streak += 1; state.bestStreak = Math.max(state.bestStreak, state.streak); updateHud(); }
+function streakReset() { state.streak = 0; updateHud(); }
+
+/* Map */
+function levelUnlocked(i) { return i === 1 || state.unlockedAll || !!state.completed[i - 1]; }
+function starsText(i) { const s = state.stars[i] || 0; return s ? '*'.repeat(s) + '.'.repeat(3 - s) : '...'; }
+function renderMap() {
+  updateHud();
+  const list = $('#map-list'); list.innerHTML = '';
+  let nextFound = false;
+  LEVELS.forEach((L) => {
+    const unlocked = levelUnlocked(L.id); const done = !!state.completed[L.id];
+    const isNext = unlocked && !done && !nextFound; if (isNext) nextFound = true;
+    const item = el('li', { class: 'map-item' + (done ? ' done' : '') + (isNext ? ' next' : '') + (unlocked ? '' : ' locked') },
+      el('div', { class: 'num', text: String(L.id) }),
+      el('div', {}, el('div', { class: 'name', text: L.name }), el('div', { class: 'sub', text: L.blurb })),
+      el('div', { class: 'row' },
+        el('span', { class: 'stars', 'aria-label': `${state.stars[L.id] || 0} of 3 stars`, text: starsText(L.id) }),
+        el('button', { class: 'btn btn-small' + (isNext ? ' btn-primary' : ''), disabled: !unlocked, onclick: () => { Audio.sfx('click'); startLevel(L.id); } }, done ? 'Replay' : (unlocked ? 'Play' : 'Locked'))
+      )
+    );
+    list.append(item);
+  });
+  const doneCount = Object.keys(state.completed).length;
+  const mc = $('#map-canvas'); drawWall(mc, Math.min(14, 7 + doneCount), { perRow: 64, label: false });
+}
+
+/* Level lifecycle */
+function startLevel(i) {
+  const L = LEVELS[i - 1]; if (!L) return;
+  if (current && current.handle && current.handle.destroy) { try { current.handle.destroy(); } catch (e) { /* ignore */ } }
+  state.level = i; showScreen('level');
+  $('#hud-name').textContent = `L${L.id}  ${L.name}`;
+  $('#card-title').textContent = L.title; $('#card-idea').innerHTML = L.idea; $('#card-goal').innerHTML = L.goal;
+  $('#card-deeper').innerHTML = L.deeper; $('#card-details').open = false;
+  $('#level-progress').style.width = '0%';
+  setTimer(!!L.timer);
+  const board = $('#board'); board.innerHTML = '';
+  Audio.setMood({ tempo: 100 + (i - 1) * 4, density: 0.5 + i * 0.05, brightness: 1400 + i * 220, seed: i });
+  const api = {
+    sfx: (n) => Audio.sfx(n),
+    status: (msg, kind) => { const s = $('#status'); if (s) { s.textContent = msg; s.className = 'status' + (kind ? ' ' + kind : ''); } live(msg); },
+    progress: (frac) => { $('#level-progress').style.width = `${Math.round(Math.max(0, Math.min(1, frac)) * 100)}%`; },
+    addScore, streakUp, streakReset, burst: (x, y, n) => FX.burst(x, y, n), live,
+    mood: (m) => Audio.setMood(m),
+    complete: (stars) => finishLevel(L, stars)
+  };
+  current = { level: L, handle: L.mount(board, api) || {} };
+  updateHud();
+}
+function setTimer(on) {
+  const wrap = $('#hud-timer-wrap'); wrap.hidden = !on;
+  if (state.timerId) { clearInterval(state.timerId); state.timerId = null; }
+  if (on) {
+    state.timerStart = Date.now();
+    state.timerId = setInterval(() => { const s = Math.floor((Date.now() - state.timerStart) / 1000); $('#hud-timer').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }, 500);
+  }
+}
+async function finishLevel(L, mechanicStars) {
+  setTimer(false);
+  Audio.sfx('fanfare'); FX.burst(innerWidth / 2, innerHeight / 3, 90);
+  const qc = await quickCheck(L.quick, L.id === 7 ? 'Boss check' : 'Quick check');
+  const stars = Math.max(1, Math.min(3, Math.round((mechanicStars * 2 + (qc.correct / qc.total) * 3) / 3)));
+  state.completed[L.id] = true; state.stars[L.id] = Math.max(state.stars[L.id] || 0, stars);
+  addScore(stars * 100); save();
+  showResult(L, stars, qc);
+}
+
+/* Quick check modal */
+function shuffleIdx(n) { const a = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function quickCheck(questions, title = 'Quick check') {
+  return new Promise((resolve) => {
+    const root = $('#modal-root'); let idx = 0, correct = 0;
+    const box = el('div', { class: 'modal-box', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'qc-title' });
+    const overlay = el('div', { class: 'modal' }, box);
+    root.append(overlay);
+    function render() {
+      const q = questions[idx]; box.innerHTML = '';
+      const head = el('div', { class: 'row', style: 'justify-content:space-between' },
+        el('h2', { id: 'qc-title', class: 'pixel', text: `${title} ${idx + 1}/${questions.length}` }),
+        el('span', { class: 'dim', text: `${correct} correct` }));
+      const qEl = el('p', { html: q.q, style: 'font-size:18px;font-weight:700' });
+      const why = el('div', { class: 'why', 'aria-live': 'polite' });
+      const next = el('button', { class: 'btn btn-primary', disabled: true, onclick: () => { Audio.sfx('click'); idx++; if (idx < questions.length) render(); else { overlay.remove(); resolve({ correct, total: questions.length }); } } }, idx === questions.length - 1 ? 'Finish' : 'Next');
+      const choices = el('div', { class: 'choices' });
+      let answered = false;
+      const perm = shuffleIdx(q.choices.length);
+      perm.forEach((orig, i) => {
+        const c = q.choices[orig];
+        const b = el('button', { class: 'btn choice', onclick: () => {
+          if (answered) return; answered = true;
+          const ok = orig === q.answer;
+          $$('.choice', choices).forEach((x, j) => { x.disabled = true; if (perm[j] === q.answer) x.classList.add('correct'); else if (j === i) x.classList.add('wrong'); });
+          if (ok) { correct++; addScore(50); streakUp(); Audio.sfx('good'); why.textContent = 'Correct. ' + q.why; }
+          else { streakReset(); Audio.sfx('bad'); why.textContent = 'Not quite. ' + q.why; }
+          head.lastChild.textContent = `${correct} correct`; next.disabled = false; next.focus();
+        } }, c);
+        choices.append(b);
+      });
+      box.append(head, qEl, choices, why, el('div', { class: 'row', style: 'justify-content:flex-end' }, next));
+      const first = $('.choice', choices); if (first) first.focus();
+    }
+    render();
+  });
+}
+
+/* Result screen */
+function showResult(L, stars, qc) {
+  const root = $('#modal-root'); root.innerHTML = '';
+  const box = el('div', { class: 'modal-box', role: 'dialog', 'aria-modal': 'true' });
+  const overlay = el('div', { class: 'modal' }, box);
+  const starsEl = el('div', { class: 'result-stars', 'aria-label': `${stars} of 3 stars`, text: '*'.repeat(stars) + '.'.repeat(3 - stars) });
+  box.append(el('h2', { class: 'pixel', text: L.id === 7 ? 'Boss cleared' : `Level ${L.id} complete` }), starsEl,
+    el('p', { text: `Quick check: ${qc.correct} of ${qc.total}. Score ${fmtInt(state.score)}. Best streak ${state.bestStreak}.` }));
+  if (L.recap) box.append(L.recap());
+  const btns = el('div', { class: 'row' });
+  if (L.id < 7) btns.append(el('button', { class: 'btn btn-primary', onclick: () => { Audio.sfx('unlock'); overlay.remove(); startLevel(L.id + 1); } }, `Next: L${L.id + 1} ${LEVELS[L.id].name}`));
+  btns.append(el('button', { class: 'btn', onclick: () => { Audio.sfx('click'); overlay.remove(); showScreen('map'); renderMap(); } }, 'Back to map'));
+  box.append(btns); root.append(overlay);
+  setTimeout(() => { Audio.sfx('star'); }, 200);
+  const first = $('.btn', btns); if (first) first.focus();
+}
+
+/* Notes drawer */
+function openDrawer(tab = 'notes') {
+  const root = $('#drawer-root'); root.innerHTML = '';
+  const panel = el('div', { class: 'drawer-panel', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Field notes and sources' });
+  const overlay = el('div', { class: 'drawer', onclick: (e) => { if (e.target === overlay) close(); } }, panel);
+  function close() { overlay.remove(); Audio.sfx('click'); }
+  const body = el('div');
+  const tabs = el('div', { class: 'tabs', role: 'tablist' });
+  function show(which) {
+    tab = which; body.innerHTML = '';
+    $$('.btn', tabs).forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === which)));
+    if (which === 'notes') {
+      const dl = el('dl'); NOTES.glossary.forEach(([t, d]) => dl.append(el('dt', { text: t }), el('dd', { html: d }))); body.append(dl);
+    } else {
+      body.append(el('p', { class: 'dim', text: 'Primary literature behind the levels. Nothing here is a claim about the unreviewed 2026 manuscript except where said so.' }));
+      const ol = el('ol'); NOTES.sources.forEach(s => ol.append(el('li', { html: s }))); body.append(ol);
+    }
+  }
+  tabs.append(el('button', { class: 'btn btn-small', role: 'tab', dataset: { tab: 'notes' }, onclick: () => show('notes') }, 'Field notes'),
+    el('button', { class: 'btn btn-small', role: 'tab', dataset: { tab: 'sources' }, onclick: () => show('sources') }, 'Sources'));
+  panel.append(el('div', { class: 'row', style: 'justify-content:space-between' }, el('h2', { class: 'pixel', text: 'Notes' }), el('button', { class: 'btn btn-small', onclick: close }, 'Close')), tabs, body);
+  root.append(overlay); show(tab);
+  panel.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  $('.btn', panel).focus();
+}
+
+/* Shared puzzle helpers (3-CNF) */
+function mulberry(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+// clause: array of literals; literal = {v: index, s: true for positive}
+function plantedCnf(n, m, rand, k = 3) {
+  const sol = Array.from({ length: n }, () => rand() < 0.5);
+  const clauses = [];
+  while (clauses.length < m) {
+    const vars = []; while (vars.length < Math.min(k, n)) { const v = Math.floor(rand() * n); if (!vars.includes(v)) vars.push(v); }
+    const lits = vars.map(v => ({ v, s: rand() < 0.5 }));
+    if (!lits.some(l => l.s === sol[l.v])) { const i = Math.floor(rand() * lits.length); lits[i].s = sol[lits[i].v]; }
+    clauses.push(lits);
+  }
+  return { n, clauses, sol };
+}
+const litText = (l) => (l.s ? '' : '¬') + 'x' + (l.v + 1);
+function litValue(l, assign) { const a = assign[l.v]; if (a === undefined || a === null) return null; return l.s ? a : !a; }
+function clauseState(cl, assign) { // 'sat' | 'dead' | 'open'
+  let anyOpen = false;
+  for (const l of cl) { const v = litValue(l, assign); if (v === true) return 'sat'; if (v === null) anyOpen = true; }
+  return anyOpen ? 'open' : 'dead';
+}
+function renderLamps(container, clauses, assign, opts = {}) {
+  container.innerHTML = '';
+  clauses.forEach((cl, ci) => {
+    const st = clauseState(cl, assign);
+    const lamp = el('div', { class: 'lamp' + (st === 'sat' ? ' lit' : st === 'dead' ? ' dead' : ''), 'aria-label': `clause ${ci + 1} ${st}` });
+    cl.forEach((l, i) => {
+      const v = litValue(l, assign);
+      const chip = el('span', { class: 'chip ' + (v === true ? 't' : v === false ? 'f' : 'u') + (opts.clickable ? ' clickable' : ''), text: litText(l) });
+      if (opts.onLiteral) chip.addEventListener('click', () => opts.onLiteral(l, ci));
+      lamp.append(chip); if (i < cl.length - 1) lamp.append(el('span', { class: 'or', text: '∨' }));
+    });
+    container.append(lamp);
+  });
+}
+function countSat(clauses, assign) { return clauses.reduce((a, c) => a + (clauseState(c, assign) === 'sat' ? 1 : 0), 0); }
+function bruteCount(n, clauses) { let c = 0; for (let mask = 0; mask < (1 << n); mask++) { const a = Array.from({ length: n }, (_, i) => !!(mask >> i & 1)); if (clauses.every(cl => clauseState(cl, a) === 'sat')) c++; } return c; }
+
+/* ------------------------------------------------------------------ */
+/* L1: Light every lamp (3-SAT by hand)                                 */
+/* ------------------------------------------------------------------ */
+LEVELS.push({
+  id: 1, name: 'Light every lamp', blurb: 'Satisfy eight 3-SAT formulas by hand.', title: 'Light every lamp', timer: true,
+  idea: 'A clause is an OR of three literals. A formula is an AND of clauses. Satisfy every clause with one assignment: that is 3-SAT.',
+  goal: 'Goal: flip the switches until every lamp is lit. Eight formulas, 3 to 9 variables. Fewer flips, more stars. Keys <span class="kbd">1</span> to <span class="kbd">9</span> toggle switches.',
+  deeper: `<p>George Boole's 1854 algebra treats truth as arithmetic: AND is multiplication, OR is addition with 1+1=1, NOT flips the bit. A <em>literal</em> is a variable or its negation. A formula in <em>conjunctive normal form</em> (CNF) is an AND of clauses, each clause an OR of literals. <em>3-CNF</em> means every clause has three literals. The satisfiability problem SAT asks whether some assignment makes the whole formula true.</p>
+  <p>SAT belongs to NP: a proposed assignment (a certificate) can be checked in time polynomial in the formula size. Stephen Cook (1971) and, independently, Leonid Levin showed SAT is NP-complete: every problem in NP can be translated into a SAT instance by a polynomial-time reduction, so a fast SAT solver would be a fast solver for all of NP. Richard Karp (1972) listed 21 further NP-complete problems and showed how reductions chain. 3-SAT is the standard hub because it is the simplest form that stays NP-complete (2-SAT is solvable in linear time).</p>
+  <p>Every formula in this level has a planted solution, so each one is satisfiable. Random formulas near 4.26 clauses per variable are the hardest in practice; these have about 4 per variable.</p>`,
+  quick: [
+    { q: 'The clause (x1 ∨ ¬x2 ∨ x3) is satisfied when', choices: ['at least one of its literals is true', 'all three literals are true', 'x1 is true and nothing else matters', 'x2 is true'], answer: 0, why: 'A clause is an OR: one true literal is enough. x2 true makes ¬x2 false, which helps nothing.' },
+    { q: 'What does it mean that SAT is in NP?', choices: ['A proposed assignment can be checked in polynomial time', 'It cannot be solved by any algorithm', 'It always takes exponential time', 'It is "not polynomial"'], answer: 0, why: 'NP is about verifying certificates quickly. It says nothing about how hard finding one is.' },
+    { q: 'Why is 3-SAT a hub problem?', choices: ['Every NP problem reduces to it in polynomial time', 'It is the easiest problem in NP', 'It can be solved in linear time', 'No 3-SAT formula is satisfiable'], answer: 0, why: 'Cook, Levin and Karp showed polynomial-time reductions from all of NP to SAT and 3-SAT.' }
+  ],
+  mount(board, api) {
+    const NS = [3, 4, 5, 6, 7, 8, 9, 9]; let pi = 0; let puzzle, assign, moves, seed = Date.now() % 100000, done = false; const starsEarned = [];
+    const head = el('div', { class: 'board-head' }); const switches = el('div', { class: 'switches', role: 'group', 'aria-label': 'variable switches' });
+    const lamps = el('div', { class: 'lamps' }); const status = el('div', { class: 'status', id: 'status' }); const foot = el('div', { class: 'row', style: 'margin-top:10px' });
+    board.append(head, switches, lamps, status, foot);
+    function newPuzzle(reshuffle) {
+      const n = NS[pi]; seed = reshuffle ? seed + 977 : seed + 1;
+      for (let tries = 0; tries < 60; tries++) { puzzle = plantedCnf(n, 4 * n, mulberry(seed + tries * 101)); if (countSat(puzzle.clauses, Array(n).fill(false)) < puzzle.clauses.length && puzzle.sol.filter(Boolean).length >= Math.max(1, Math.floor(n / 3))) break; }
+      assign = Array(n).fill(false); moves = 0; done = false; render();
+      api.status(`Formula ${pi + 1} of ${NS.length}: ${n} variables, ${puzzle.clauses.length} clauses.`);
+    }
+    function render() {
+      const sat = countSat(puzzle.clauses, assign);
+      head.innerHTML = ''; head.append(el('span', { class: 'pixel', text: `Formula ${pi + 1}/${NS.length}` }), el('span', { text: `Lit ${sat}/${puzzle.clauses.length}  |  Flips ${moves}` }));
+      switches.innerHTML = '';
+      assign.forEach((a, i) => switches.append(el('button', { class: 'switch', 'aria-pressed': String(a), 'aria-label': `x${i + 1} is ${a ? 'true' : 'false'}`, onclick: () => flip(i) }, el('span', { text: `x${i + 1}` }), el('small', { text: a ? 'TRUE' : 'FALSE' }))));
+      renderLamps(lamps, puzzle.clauses, assign);
+      foot.innerHTML = '';
+      if (done) foot.append(el('button', { class: 'btn btn-primary', onclick: () => { api.sfx('click'); pi++; if (pi < NS.length) newPuzzle(false); else finish(); } }, pi + 1 < NS.length ? 'Next formula' : 'Finish level'));
+      else foot.append(el('button', { class: 'btn btn-ghost btn-small', onclick: () => { api.sfx('whoosh'); newPuzzle(true); } }, 'Different formula'));
+    }
+    function flip(i) {
+      if (done) return; assign[i] = !assign[i]; moves++; api.sfx('click');
+      const sat = countSat(puzzle.clauses, assign); render();
+      if (sat === puzzle.clauses.length) {
+        done = true; const n = puzzle.n; const s = moves <= n + 1 ? 3 : moves <= 2 * n ? 2 : 1; starsEarned.push(s);
+        api.addScore(100 + s * 20); api.streakUp(); api.sfx('good'); api.sfx('star');
+        const r = lamps.getBoundingClientRect(); api.burst(r.left + r.width / 2, r.top + r.height / 2, 40);
+        api.status(`All ${puzzle.clauses.length} lamps lit in ${moves} flips. ${s} star${s > 1 ? 's' : ''}.`, 'good'); api.progress((pi + 1) / NS.length); render();
+        const nb = $('.btn-primary', foot); if (nb) nb.focus();
+      } else api.status(`Lit ${sat} of ${puzzle.clauses.length}.`);
+    }
+    function finish() { const avg = starsEarned.reduce((a, b) => a + b, 0) / starsEarned.length; api.complete(Math.round(avg)); }
+    function onKey(e) { if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; const d = parseInt(e.key, 10); if (d >= 1 && d <= 9 && puzzle && d <= puzzle.n) { flip(d - 1); e.preventDefault(); } }
+    document.addEventListener('keydown', onKey);
+    newPuzzle(false);
+    return { destroy: () => document.removeEventListener('keydown', onKey), debug: { solve: () => { puzzle.sol.forEach((v, i) => { if (assign[i] !== v) flip(i); }); } } };
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* L2: Meet 2^n (brute force)                                           */
+/* ------------------------------------------------------------------ */
+function fmtDuration(sec) {
+  const Y = 365.25 * 86400;
+  const r = (x, u) => { let t = x >= 100 ? Math.round(x).toLocaleString('en-US') : x >= 10 ? x.toFixed(0) : x.toFixed(1).replace(/\.0$/, ''); if (t === '1') u = u.replace(/s$/, ''); return `about ${t} ${u}`; };
+  if (sec < 1e-6) return r(sec * 1e9, 'nanoseconds');
+  if (sec < 1e-3) return r(sec * 1e6, 'microseconds');
+  if (sec < 1) return r(sec * 1e3, 'milliseconds');
+  if (sec < 60) return r(sec, 'seconds');
+  if (sec < 3600) return r(sec / 60, 'minutes');
+  if (sec < 86400 * 2) return r(sec / 3600, 'hours');
+  if (sec < Y) return r(sec / 86400, 'days');
+  const y = sec / Y;
+  if (y < 1e6) return r(y, 'years');
+  if (y < 1e9) return r(y / 1e6, 'million years');
+  if (y < 1e12) return r(y / 1e9, 'billion years');
+  if (y < 1e15) return r(y / 1e12, 'trillion years');
+  return `about ${y.toExponential(1)} years`;
+}
+LEVELS.push({
+  id: 2, name: 'Meet 2^n', blurb: 'Watch brute force hit the wall.', title: 'Meet 2^n',
+  idea: 'Doubling the variables squares the work. Exponential growth is the wall.',
+  goal: 'Goal: build the wall, run the counter, then answer five quick questions about how long brute force takes at a billion assignments per second.',
+  deeper: `<p>Brute force tries all 2^n assignments. Each extra variable doubles the count, so going from n to 2n does not double the work, it squares it: 2^(2n) = (2^n)^2. A polynomial-time algorithm, say n^3 steps, has the opposite shape: doubling n multiplies the work by 8, no matter how large n already is.</p>
+  <p>Hardware does not rescue brute force. A machine 1000 times faster handles about 10 more variables, since 2^10 = 1024. Moore's law, doubling transistor counts roughly every 18 to 24 months while it lasted, bought one extra variable per doubling. The age of the universe is about 1.4 times 10^10 years, which is 4.4 times 10^17 seconds; at 10^9 assignments per second that is roughly 2^59 assignments, so n = 60 is already beyond a universe-length computation on one such machine.</p>
+  <p>This is why complexity theory draws its first line between polynomial and exponential time. The class P holds problems solvable in polynomial time; NP holds problems whose solutions can be checked in polynomial time. Whether every NP problem can be solved without the exponential wall is the P versus NP question, open since 1971.</p>`,
+  quick: [
+    { q: 'Adding one more variable to a brute-force search', choices: ['doubles the work', 'adds one step', 'squares the work', 'halves the work'], answer: 0, why: '2^(n+1) = 2 times 2^n. Squaring happens when you double n.' },
+    { q: 'A computer 1000 times faster extends brute force by about how many variables?', choices: ['10', '1000', '2', '100'], answer: 0, why: '2^10 = 1024, so a thousandfold speedup is worth ten more bits.' },
+    { q: 'Why do constant-factor speedups not beat 2^n?', choices: ['They only shift n by a constant', 'Constants are always small', '2^n is actually polynomial', 'They do beat it'], answer: 0, why: 'Dividing 2^n by a constant c is the same as subtracting log2(c) from n.' }
+  ],
+  mount(board, api) {
+    const canvas = el('canvas', { width: 1000, height: 300, 'aria-label': 'wall of 2^n blocks' });
+    const nSlider = el('input', { type: 'range', min: 1, max: 30, value: 12, id: 'wall-n', 'aria-label': 'number of variables n' });
+    const nLabel = el('span', { class: 'bigstat' }); const heightLabel = el('div', { class: 'dim', style: 'font-size:14px' });
+    const rateSel = el('select', { id: 'rate', 'aria-label': 'assignments per second' }, el('option', { value: '1e6', text: '1 million per second' }), el('option', { value: '1e9', text: '1 billion per second', selected: true }));
+    const runBtn = el('button', { class: 'btn btn-primary btn-small' }, 'Run brute force');
+    const counter = el('div', { class: 'counter', 'aria-live': 'off' }); const prog = el('div', { class: 'progress', style: 'margin-top:8px' }, el('div'));
+    const eta = el('div', { class: 'bigstat' }); const status = el('div', { class: 'status', id: 'status' });
+    const quizBtn = el('button', { class: 'btn btn-primary' }, 'Start the five questions'); const quiz = el('div', { class: 'stack', style: 'margin-top:12px' });
+    board.append(el('div', { class: 'rate-row' }, el('label', { for: 'wall-n', text: 'n =' }), nSlider, nLabel), heightLabel, canvas,
+      el('div', { class: 'rate-row' }, el('label', { for: 'rate', text: 'Speed' }), rateSel, runBtn), counter, prog, eta, status, el('div', { class: 'row', style: 'margin-top:10px' }, quizBtn), quiz);
+    let n = 12, running = null, startReal = 0;
+    function update() {
+      n = parseInt(nSlider.value, 10); drawWall(canvas, n, { perRow: 64 });
+      nLabel.textContent = `2^${n} = ${fmtInt(pow2(n))}`;
+      const rows = pow2(n) / 64, meters = rows * 0.1;
+      let cmp = ''; if (meters > 384400e3) cmp = ', farther than the Moon'; else if (meters > 8849) cmp = ', taller than Everest'; else if (meters > 828) cmp = ', taller than the tallest building';
+      heightLabel.textContent = `As a wall 64 blocks wide with 10 cm blocks: ${fmtInt(Math.ceil(rows))} rows, ${meters >= 1000 ? (meters / 1000).toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' km' : meters.toFixed(1) + ' m'} tall${cmp}.`;
+      const rate = parseFloat(rateSel.value); eta.textContent = `Finish time at this speed: ${fmtDuration(pow2(n) / rate)}`;
+      api.sfx('tick');
+    }
+    nSlider.addEventListener('input', update); rateSel.addEventListener('change', update);
+    function stopRun() { if (running) { cancelAnimationFrame(running); running = null; } runBtn.textContent = 'Run brute force'; api.mood({ tempo: 104 }); }
+    runBtn.addEventListener('click', () => {
+      api.sfx('click'); if (running) { stopRun(); api.status('Stopped.'); return; }
+      const rate = parseFloat(rateSel.value); const total = pow2(n); startReal = performance.now(); runBtn.textContent = 'Stop';
+      api.mood({ tempo: rate >= 1e9 ? 130 : 118, density: 0.9 });
+      const frame = () => {
+        const elapsed = (performance.now() - startReal) / 1000; const count = Math.min(total, Math.floor(elapsed * rate));
+        const bits = count >= total ? total - 1 : count; counter.textContent = `assignment ${fmtInt(bits)} of ${fmtInt(total)}: ` + (n <= 52 ? bits.toString(2).padStart(n, '0') : 'too many bits to show');
+        prog.firstChild.style.width = `${(count / total) * 100}%`;
+        if (count >= total) { stopRun(); api.status(`Done: 2^${n} assignments in ${fmtDuration(total / rate)} of simulated time.`, 'good'); api.sfx('good'); return; }
+        if (elapsed > 6) { stopRun(); api.status(`Still going after 6 seconds: ${(100 * count / total).toExponential(1)}% done. Projected finish: ${fmtDuration(total / rate)}.`, 'bad'); api.sfx('bad'); return; }
+        running = requestAnimationFrame(frame);
+      };
+      running = requestAnimationFrame(frame);
+    });
+    update();
+    // Quiz
+    const QN = [20, 40, 60, 80, 100]; let qi = 0, correct = 0;
+    quizBtn.addEventListener('click', () => { api.sfx('click'); quizBtn.hidden = true; stopRun(); renderQ(); });
+    function renderQ() {
+      quiz.innerHTML = ''; const target = QN[qi]; const rate = 1e9;
+      let alts = [target - 20, target, target + 20, target + 40]; if (alts[0] < 10) alts = [target, target + 20, target + 40, target + 60];
+      const choices = alts.map(x => ({ n: x, text: fmtDuration(pow2(x) / rate) })); for (let i = choices.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [choices[i], choices[j]] = [choices[j], choices[i]]; }
+      const why = el('div', { class: 'why' }); const list = el('div', { class: 'choices' });
+      quiz.append(el('p', { style: 'font-weight:700', text: `Question ${qi + 1} of 5. At one billion assignments per second, how long does brute force take for n = ${target}?` }), list, why);
+      let answered = false;
+      choices.forEach(c => list.append(el('button', { class: 'btn choice', onclick: (e) => {
+        if (answered) return; answered = true; const ok = c.n === target;
+        $$('.choice', list).forEach(b => { b.disabled = true; if (b.textContent === fmtDuration(pow2(target) / rate)) b.classList.add('correct'); else if (b === e.currentTarget) b.classList.add('wrong'); });
+        if (ok) { correct++; api.addScore(60); api.streakUp(); api.sfx('good'); why.textContent = `Yes: 2^${target} / 10^9 seconds is ${fmtDuration(pow2(target) / rate)}.`; }
+        else { api.streakReset(); api.sfx('bad'); why.textContent = `No: 2^${target} / 10^9 seconds is ${fmtDuration(pow2(target) / rate)}. Your pick was the time for n = ${c.n}.`; }
+        api.progress((qi + 1) / 5);
+        quiz.append(el('button', { class: 'btn btn-primary', onclick: () => { api.sfx('click'); qi++; if (qi < QN.length) renderQ(); else api.complete(correct === 5 ? 3 : correct >= 3 ? 2 : 1); } }, qi < 4 ? 'Next question' : 'Finish level'));
+        $('.btn-primary', quiz).focus();
+      } }, c.text)));
+    }
+    return { destroy: stopRun, debug: { answerAll: () => { while (qi < QN.length) { qi++; correct++; } api.complete(3); } } };
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* L3: Be clever (play the DPLL algorithm)                              */
+/* ------------------------------------------------------------------ */
+const sleep = (ms) => new Promise(r => setTimeout(r, reducedMotion() ? 0 : ms));
+LEVELS.push({
+  id: 3, name: 'Be clever', blurb: 'Play the DPLL algorithm by hand.', title: 'Be clever', timer: true,
+  idea: 'Smart search prunes the tree. It still grows exponentially in the worst case.',
+  goal: 'Goal: choose a variable and a value. Unit propagation fills in what is forced. On a conflict the game backtracks for you. Three formulas, n = 8, 12, 16. Fewer decisions, more stars.',
+  deeper: `<p>Martin Davis and Hilary Putnam (1960) gave a resolution procedure for propositional logic; Davis, George Logemann and Donald Loveland (1962) turned it into the backtracking search now called DPLL. Its two rules are cheap and powerful. <em>Unit propagation</em>: if every literal in a clause but one is false, the last one must be true. <em>Pure literal elimination</em>: a variable that appears with only one polarity in the remaining clauses can be set to satisfy all of them at no risk. Everything else is a decision, and every decision is a node in a binary tree that may have to be undone.</p>
+  <p>Modern CDCL solvers (conflict-driven clause learning) add learned clauses, restarts and clever variable ordering, and solve industrial instances with millions of variables. Yet the worst case has barely moved. For 3-SAT the best proven bounds are about 1.308^n for a randomized algorithm (Paturi, Pudlák, Saks and Zane, with later refinements) and roughly 1.33^n deterministically. Both are 2^(cn) with c near 0.4.</p>
+  <p>The Exponential Time Hypothesis (Impagliazzo and Paturi, 2001) is the conjecture that this is no accident: there is a constant c greater than 0 such that no algorithm solves 3-SAT in time 2^(cn). It is stronger than P not equal to NP, which only rules out polynomial time.</p>`,
+  quick: [
+    { q: 'Unit propagation does what?', choices: ['Sets the last unassigned literal of a clause whose other literals are false', 'Picks a random variable to branch on', 'Deletes the longest clauses', 'Counts the satisfying assignments'], answer: 0, why: 'A clause with one open literal and the rest false forces that literal to be true.' },
+    { q: 'The Exponential Time Hypothesis says', choices: ['3-SAT needs 2^(cn) time for some constant c > 0', '3-SAT is in P', '3-SAT needs exactly 2^n time', 'P is not equal to NP is false'], answer: 0, why: 'ETH forbids 2^(o(n)) algorithms for 3-SAT. It does not pin the constant.' },
+    { q: 'The best known 3-SAT algorithms run in roughly', choices: ['1.31^n', 'n^3', '2^(sqrt n)', 'n log n'], answer: 0, why: 'PPSZ-style algorithms give about 1.308^n randomized. That is still exponential.' }
+  ],
+  mount(board, api) {
+    const NS = [8, 12, 16]; let fi = 0, F, assign, trail, stack, decisions, busy = false, solved = false; const starsEarned = []; let seed = 4242 + (Date.now() % 1000);
+    const head = el('div', { class: 'board-head' }); const vars = el('div', { class: 'switches', role: 'group', 'aria-label': 'variables' });
+    const lamps = el('div', { class: 'lamps' }); const stackView = el('div', { class: 'stackview', style: 'margin-top:10px', 'aria-label': 'decision stack' });
+    const status = el('div', { class: 'status', id: 'status' }); const foot = el('div', { class: 'row', style: 'margin-top:10px' });
+    board.append(head, vars, lamps, el('h3', { text: 'Decision stack', style: 'margin-top:12px' }), stackView, status, foot);
+    function newFormula() {
+      const n = NS[fi]; seed += 13; F = plantedCnf(n, Math.round(4.2 * n), mulberry(seed)); assign = Array(n).fill(null); trail = []; stack = []; decisions = 0; solved = false; render();
+      api.status(`Formula ${fi + 1} of 3: ${n} variables, ${F.clauses.length} clauses. Brute force would try up to ${fmtInt(pow2(n))} assignments.`);
+    }
+    const allSat = () => F.clauses.every(c => clauseState(c, assign) === 'sat');
+    const conflictClause = () => F.clauses.find(c => clauseState(c, assign) === 'dead');
+    function setVar(v, val, reason) { assign[v] = val; trail.push({ v, val, reason }); }
+    function undoTo(len) { while (trail.length > len) { const t = trail.pop(); assign[t.v] = null; } }
+    async function propagate() {
+      for (;;) {
+        if (conflictClause()) return 'conflict';
+        let unit = null;
+        for (const c of F.clauses) { if (clauseState(c, assign) !== 'open') continue; const open = c.filter(l => litValue(l, assign) === null); if (open.length === 1) { unit = open[0]; break; } }
+        if (!unit) return 'ok';
+        setVar(unit.v, unit.s, 'unit'); api.sfx('tick'); render(); await sleep(140);
+      }
+    }
+    async function decide(v, val, reason = 'decision') {
+      if (busy || solved) return; busy = true; render();
+      if (reason === 'decision') { stack.push({ v, val, flipped: false, trailLen: trail.length }); decisions++; }
+      setVar(v, val, reason); api.sfx('click'); render(); await sleep(120);
+      let res = await propagate();
+      while (res === 'conflict') {
+        api.sfx('bad'); api.status('Conflict: a clause has every literal false. Backtracking.', 'bad'); render(); await sleep(420);
+        let resolved = false;
+        while (stack.length) {
+          const fr = stack[stack.length - 1]; undoTo(fr.trailLen);
+          if (!fr.flipped) { fr.flipped = true; fr.val = !fr.val; decisions++; setVar(fr.v, fr.val, 'flip'); render(); await sleep(160); resolved = true; break; }
+          stack.pop(); render(); await sleep(100);
+        }
+        if (!resolved) { api.status('Every branch failed: the formula would be unsatisfiable. (This cannot happen here; every formula has a planted solution.)', 'bad'); busy = false; render(); return; }
+        res = await propagate();
+      }
+      busy = false;
+      if (allSat()) {
+        solved = true; const n = F.n; const s = decisions <= Math.ceil(n / 2) ? 3 : decisions <= n ? 2 : 1; starsEarned.push(s);
+        api.addScore(120 + s * 30); api.streakUp(); api.sfx('good'); api.sfx('star'); const r = lamps.getBoundingClientRect(); api.burst(r.left + r.width / 2, r.top + r.height / 2, 50);
+        api.status(`Satisfied with ${decisions} decision node${decisions === 1 ? '' : 's'} instead of up to ${fmtInt(pow2(n))} brute-force checks. ${s} star${s > 1 ? 's' : ''}.`, 'good'); api.progress((fi + 1) / 3);
+      } else api.status(`${trail.filter(t => t.reason === 'unit').length} forced by unit propagation so far. Decision nodes: ${decisions}.`);
+      render();
+    }
+    function pureLiteral() {
+      if (busy || solved) return;
+      const open = F.clauses.filter(c => clauseState(c, assign) === 'open');
+      for (let v = 0; v < F.n; v++) {
+        if (assign[v] !== null) continue; let pos = false, neg = false;
+        for (const c of open) for (const l of c) if (l.v === v) { if (l.s) pos = true; else neg = true; }
+        if ((pos || neg) && !(pos && neg)) { api.sfx('whoosh'); api.status(`x${v + 1} is a pure literal: it only appears ${pos ? 'positively' : 'negated'} in the open clauses. Set to ${pos ? 'TRUE' : 'FALSE'} for free.`, 'good'); decide(v, pos, 'pure'); return; }
+      }
+      api.sfx('bad'); api.status('No pure literal right now. Make a decision.');
+    }
+    function render() {
+      head.innerHTML = ''; head.append(el('span', { class: 'pixel', text: `Formula ${fi + 1}/3` }), el('span', { text: `Lit ${countSat(F.clauses, assign)}/${F.clauses.length}  |  Decisions ${decisions}  |  2^${F.n} = ${fmtInt(pow2(F.n))}` }));
+      vars.innerHTML = '';
+      for (let v = 0; v < F.n; v++) {
+        const a = assign[v];
+        if (a === null) {
+          vars.append(el('div', { class: 'switch unset', role: 'group', 'aria-label': `x${v + 1} unassigned` }, el('span', { text: `x${v + 1}` }),
+            el('div', { class: 'row', style: 'gap:4px' }, el('button', { class: 'btn btn-small is-true', style: 'min-height:26px;padding:0 6px', disabled: busy || solved, onclick: () => decide(v, true) }, 'T'), el('button', { class: 'btn btn-small is-false', style: 'min-height:26px;padding:0 6px', disabled: busy || solved, onclick: () => decide(v, false) }, 'F'))));
+        } else {
+          const t = trail.find(x => x.v === v);
+          vars.append(el('div', { class: 'switch', 'aria-pressed': String(a), 'aria-label': `x${v + 1} is ${a} by ${t ? t.reason : 'assignment'}` }, el('span', { text: `x${v + 1}` }), el('small', { text: (a ? 'TRUE' : 'FALSE') + (t && t.reason === 'unit' ? ' (unit)' : t && t.reason === 'pure' ? ' (pure)' : t && t.reason === 'flip' ? ' (flip)' : '') })));
+        }
+      }
+      renderLamps(lamps, F.clauses, assign);
+      stackView.innerHTML = '';
+      if (!trail.length) stackView.append(el('span', { class: 'dim', text: 'empty: no decisions yet' }));
+      trail.forEach(t => stackView.append(el('span', { class: t.reason === 'decision' || t.reason === 'flip' ? 'frame' + (t.reason === 'flip' ? ' flipped' : '') : 'trail-unit', text: `x${t.v + 1}=${t.val ? 'T' : 'F'}${t.reason === 'unit' ? ' u' : t.reason === 'pure' ? ' p' : t.reason === 'flip' ? ' flip' : ''}` })));
+      foot.innerHTML = '';
+      if (solved) foot.append(el('button', { class: 'btn btn-primary', onclick: () => { api.sfx('click'); fi++; if (fi < NS.length) newFormula(); else api.complete(Math.round(starsEarned.reduce((a, b) => a + b, 0) / starsEarned.length)); } }, fi + 1 < NS.length ? 'Next formula' : 'Finish level'));
+      else foot.append(el('button', { class: 'btn btn-small', disabled: busy, onclick: pureLiteral }, 'Pure literal elimination'), el('button', { class: 'btn btn-ghost btn-small', disabled: busy, onclick: () => { api.sfx('whoosh'); newFormula(); } }, 'Restart this formula'));
+    }
+    newFormula();
+    return { destroy: () => {}, debug: { solve: async () => { for (let v = 0; v < F.n; v++) { if (solved) break; if (assign[v] === null) { await decide(v, F.sol[v]); } } } } };
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* L4: Growth race (asymptotics)                                        */
+/* ------------------------------------------------------------------ */
+const FUNCS = [
+  { id: 'n2', label: 'n²', log2: n => 2 * Math.log2(n) },
+  { id: 'n3', label: 'n³', log2: n => 3 * Math.log2(n) },
+  { id: 'n10', label: 'n¹⁰', log2: n => 10 * Math.log2(n) },
+  { id: 'sq', label: '2^(√n)', log2: n => Math.sqrt(n) },
+  { id: 'sub', label: '2^(n/√log₂n), the barely-subexponential one', short: '2^(n/√log n)', log2: n => n / Math.sqrt(Math.log2(n)) },
+  { id: 'n10e', label: '2^(n/10)', log2: n => n / 10 },
+  { id: 'ppsz', label: '1.308^n', log2: n => n * Math.log2(1.308) },
+  { id: '2n', label: '2^n', log2: n => n }
+];
+function fmtLog2(k) { const dec = k * Math.log10(2); if (k < 40) return `≈ ${Math.round(pow2(k)).toLocaleString('en-US')}`; return `≈ 10^${Math.round(dec).toLocaleString('en-US')}`; }
+LEVELS.push({
+  id: 4, name: 'Growth race', blurb: 'Rank running times at n = 10^3 to 10^12.', title: 'Growth race',
+  idea: 'Subexponential, 2^(o(n)), is not the same as 2^(n^ε), and neither is polynomial.',
+  goal: 'Goal: for each n, tap the eight running times from smallest to largest, then watch the race. Finish with one head-to-head comparison that matters for the Exponential Time Hypothesis.',
+  deeper: `<p>Four regimes matter here. <em>Polynomial</em> time is n^c for a fixed c. <em>Quasi-polynomial</em> is 2^((log n)^c), which already beats every polynomial. <em>SUBEXP</em> means 2^(n^ε) for every ε greater than 0; 2^(√n) is an example. <em>Subexponential in the ETH sense</em> only means 2^(o(n)): the exponent grows slower than n, by however little. The running time claimed in the 2026 manuscript, 2^(O(n (log log n)²/√log n)), lives in that last regime. Its exponent is n divided by something that grows, so it is 2^(o(n)), but n/√log n grows faster than n^0.9, n^0.99 and every n^ε with ε less than 1. Such an algorithm would refute ETH while leaving open whether 3-SAT is in SUBEXP, let alone in P.</p>
+  <p>Exponentials of the form 2^(cn) are all the same up to the constant c; 1.308^n is 2^(0.387n). ETH is exactly the statement that for 3-SAT the best c is bounded away from 0. The Strong ETH (SETH) says that for k-SAT the best c tends to 1 as k grows: brute force is essentially optimal for wide clauses.</p>
+  <p>In the race, watch 2^(√n) overtake n^10 between n = 10^3 and n = 10^6. Any 2^(n^ε) eventually beats any polynomial, but "eventually" can be far away.</p>`,
+  quick: [
+    { q: 'Which running time is 2^(o(n)) but not 2^(n^ε) for small ε?', choices: ['2^(n/√log n)', '2^(n/10)', '2^(√n)', 'n^10'], answer: 0, why: 'n/√log n is o(n) yet grows faster than every n^ε with ε < 1.' },
+    { q: 'If 3-SAT had a 2^(n/√log n) algorithm, then', choices: ['ETH is false but P vs NP is untouched', 'P = NP', '3-SAT is in SUBEXP', '3-SAT is in P'], answer: 0, why: 'The bound is 2^(o(n)), which refutes ETH. It is nowhere near polynomial or 2^(n^ε).' },
+    { q: 'Which function eventually beats every polynomial?', choices: ['2^(√n)', 'n^100', '(log n)^1000', 'n log n'], answer: 0, why: 'The exponent √n outgrows c log n for any fixed c, so 2^(√n) passes n^c.' }
+  ],
+  mount(board, api) {
+    const ROUNDS = [1e3, 1e6, 1e9, 1e12]; let ri = 0, order = [], points = 0; const status = el('div', { class: 'status', id: 'status' });
+    const stage = el('div', { class: 'stack' }); board.append(stage, status);
+    function renderRound() {
+      stage.innerHTML = ''; order = [];
+      const n = ROUNDS[ri];
+      const palette = el('div', { class: 'palette', role: 'group', 'aria-label': 'running times to place' });
+      const slot = el('div', { class: 'order-slot', 'aria-label': 'your order, smallest first' });
+      const reveal = el('button', { class: 'btn btn-primary', disabled: true }, 'Reveal the race');
+      const undo = el('button', { class: 'btn btn-small btn-ghost', onclick: () => { if (!order.length) return; order.pop(); api.sfx('click'); draw(); } }, 'Undo');
+      function draw() {
+        palette.innerHTML = ''; slot.innerHTML = '';
+        FUNCS.forEach(f => { if (!order.includes(f.id)) palette.append(el('button', { class: 'chip clickable btn-small', style: 'min-height:40px', onclick: () => { order.push(f.id); api.sfx('tick'); draw(); } }, f.short || f.label)); });
+        order.forEach((id, i) => { const f = FUNCS.find(x => x.id === id); slot.append(el('span', { class: 'chip', text: `${i + 1}. ${f.short || f.label}` })); });
+        if (!order.length) slot.append(el('span', { class: 'dim', text: 'tap the smallest first' }));
+        reveal.disabled = order.length !== FUNCS.length;
+      }
+      reveal.addEventListener('click', () => { api.sfx('whoosh'); showRace(n); });
+      stage.append(el('div', { class: 'board-head' }, el('span', { class: 'pixel', text: `Round ${ri + 1}/4` }), el('span', { class: 'bigstat', text: `n = 10^${Math.round(Math.log10(n))}` })),
+        el('p', { text: 'Smallest to largest at this n. Tap in order.' }), palette, slot, el('div', { class: 'row' }, undo, reveal));
+      draw();
+    }
+    function showRace(n) {
+      const truth = FUNCS.slice().sort((a, b) => a.log2(n) - b.log2(n)); const max = truth[truth.length - 1].log2(n);
+      let right = 0;
+      const rows = truth.map((f, i) => {
+        const placed = FUNCS.find(x => x.id === order[i]);
+        const close = Math.abs(placed.log2(n) - f.log2(n)) <= 0.05 * Math.max(placed.log2(n), f.log2(n));
+        const ok = placed.id === f.id || close; if (ok) right++;
+        return el('div', { class: 'race-row' }, el('span', { html: `<b>${i + 1}.</b> ${f.short || f.label}` + (ok ? '' : ` <span class="dim">(you put ${placed.short || placed.label})</span>`), style: ok ? '' : `color: var(--false)` }),
+          el('div', { class: 'race-bar' }, el('div', { dataset: { w: `${(f.log2(n) / max) * 100}%` } })), el('span', { class: 'dim', text: fmtLog2(f.log2(n)) }));
+      });
+      points += right; api.addScore(right * 15); if (right >= 6) api.streakUp(); else api.streakReset(); api.sfx(right >= 6 ? 'good' : 'bad');
+      stage.innerHTML = '';
+      stage.append(el('div', { class: 'board-head' }, el('span', { class: 'pixel', text: `Round ${ri + 1}/4: ${right}/8 positions` }), el('span', { class: 'bigstat', text: `n = 10^${Math.round(Math.log10(n))}` })),
+        el('p', { class: 'dim', text: 'Bars are on a logarithmic scale: bar length is the exponent. Near-ties count as correct either way.' }), el('div', { class: 'race-track' }, rows),
+        el('div', { class: 'row', style: 'margin-top:10px' }, el('button', { class: 'btn btn-primary', onclick: () => { api.sfx('click'); ri++; api.progress(ri / 5); if (ri < ROUNDS.length) renderRound(); else showComparison(); } }, ri < ROUNDS.length - 1 ? 'Next round' : 'Final comparison')));
+      requestAnimationFrame(() => $$('.race-bar > div', stage).forEach(b => { b.style.width = b.dataset.w; }));
+      api.status(`${right} of 8 in the right place.`, right >= 6 ? 'good' : 'bad');
+    }
+    function showComparison() {
+      stage.innerHTML = '';
+      const canvas = el('canvas', { width: 1000, height: 320, 'aria-label': 'ratio of exponents n/sqrt(log n) over n^0.9 against n' });
+      const why = el('div', { class: 'why' });
+      const btnA = el('button', { class: 'btn choice' }, '2^(n/√log₂ n) is larger for huge n');
+      const btnB = el('button', { class: 'btn choice' }, '2^(n^0.9) is larger for huge n');
+      let answered = false;
+      function pick(a) {
+        if (answered) return; answered = true; const ok = a; btnA.disabled = btnB.disabled = true; btnA.classList.add('correct'); if (!ok) btnB.classList.add('wrong');
+        if (ok) { points += 8; api.addScore(80); api.streakUp(); api.sfx('good'); why.textContent = 'Right. n/√log₂ n divided by n^0.9 equals n^0.1/√log₂ n, which grows without bound. The crossover is near n = 6 million; below it 2^(n^0.9) is larger.'; }
+        else { api.streakReset(); api.sfx('bad'); why.textContent = 'Not for huge n. The ratio of exponents is n^0.1/√log₂ n, which grows without bound; 2^(n^0.9) only wins below about n = 6 million.'; }
+        drawPlot(); stage.append(el('div', { class: 'row' }, el('button', { class: 'btn btn-primary', onclick: () => { api.sfx('click'); api.complete(points >= 36 ? 3 : points >= 24 ? 2 : 1); } }, 'Finish level'))); $('.btn-primary', stage).focus();
+      }
+      btnA.addEventListener('click', () => pick(true)); btnB.addEventListener('click', () => pick(false));
+      stage.append(el('div', { class: 'board-head' }, el('span', { class: 'pixel', text: 'Head to head' })), el('p', { style: 'font-weight:700', html: 'The claimed ETH-refuting running time is roughly 2^(n/√log n). Compare it with 2^(n^0.9), a classic SUBEXP-style bound. Which is larger for huge n?' }),
+        el('div', { class: 'choices' }, btnA, btnB), why, canvas);
+      function drawPlot() {
+        const g = canvas.getContext('2d'); const W = canvas.width, H = canvas.height; g.fillStyle = cssVar('--bg2'); g.fillRect(0, 0, W, H);
+        const pad = 50; const xmin = 3, xmax = 30; // log10 n
+        const xs = (lx) => pad + (lx - xmin) / (xmax - xmin) * (W - 2 * pad);
+        const ymin = -1, ymax = 3; // log10 of ratio
+        const ys = (ly) => H - pad - (ly - ymin) / (ymax - ymin) * (H - 2 * pad);
+        g.strokeStyle = cssVar('--line'); g.lineWidth = 1; g.beginPath(); g.moveTo(pad, ys(0)); g.lineTo(W - pad, ys(0)); g.stroke();
+        g.fillStyle = cssVar('--fg'); g.font = '13px "Atkinson Hyperlegible", sans-serif'; g.textAlign = 'center';
+        for (let lx = 3; lx <= 30; lx += 3) { g.fillText(`10^${lx}`, xs(lx), H - pad + 18); }
+        g.textAlign = 'right'; for (let ly = -1; ly <= 3; ly++) { g.fillText(`10^${ly}`, pad - 6, ys(ly) + 4); }
+        g.textAlign = 'left'; g.fillText('ratio of exponents: (n/√log₂ n) / n^0.9', pad, 20); g.fillText('ratio = 1', W - pad - 60, ys(0) - 6);
+        g.strokeStyle = cssVar('--accent'); g.lineWidth = 3; g.beginPath(); let first = true;
+        for (let lx = xmin; lx <= xmax; lx += 0.05) { const n = Math.pow(10, lx); const ratio = (n / Math.sqrt(Math.log2(n))) / Math.pow(n, 0.9); const ly = Math.log10(ratio); const x = xs(lx), y = ys(Math.max(ymin, Math.min(ymax, ly))); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
+        g.stroke();
+        const cross = Math.log10(6e6); g.fillStyle = cssVar('--true'); g.beginPath(); g.arc(xs(cross), ys(0), 6, 0, Math.PI * 2); g.fill(); g.fillStyle = cssVar('--fg'); g.fillText('crossover near n = 6 million', xs(cross) + 10, ys(0) - 10);
+      }
+      drawPlot();
+    }
+    renderRound();
+    return { destroy: () => {}, debug: { finish: () => { points = 40; api.complete(3); } } };
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* L5: Reduce it (3-COLORING to 3-SAT)                                  */
+/* ------------------------------------------------------------------ */
+LEVELS.push({
+  id: 5, name: 'Reduce it', blurb: 'Turn graph coloring into a formula, then solve it.', title: 'Reduce it',
+  idea: 'Reductions move hardness around. ETH is a hub: hundreds of lower bounds hang from it through such linear reductions.',
+  goal: 'Goal: pick a gadget, tap vertices and edges until the formula is complete (5 vertex gadgets, 6 edge gadgets). Then satisfy it by choosing colors, and read the 3-coloring off the assignment.',
+  deeper: `<p>A polynomial-time reduction from problem A to problem B turns any instance of A into an instance of B whose answer is the same. If B has a fast algorithm, so does A. Richard Karp (1972) used this to show that 3-COLORING, CLIQUE, HAMILTONIAN CYCLE and many others are NP-complete. The reduction here is the standard one: variable x(v,c) means "vertex v gets color c"; one clause per vertex says it gets at least one color, and three clauses per edge forbid the endpoints from sharing a color. (Clauses saying "at most one color per vertex" are optional: if a vertex ends up with two colors, pick either one.)</p>
+  <p>The size matters. The formula has 3|V| variables, linear in the graph. So a 2^(o(n)) algorithm for SAT gives a 2^(o(|V|)) algorithm for 3-COLORING, and the same holds in reverse for reductions that keep the variable count linear. The Exponential Time Hypothesis plugs into this machinery through the sparsification lemma of Impagliazzo, Paturi and Zane (2001): any 3-CNF can be replaced by a small disjunction of 3-CNFs each with only O(n) clauses, so ETH can be stated with linearly many clauses, and reductions that are linear in n plus m preserve it.</p>
+  <p>Lokshtanov, Marx and Saurabh's 2011 survey "Lower bounds based on the Exponential Time Hypothesis" collects the consequences: no 2^(o(k)) poly(n) algorithm for k-VERTEX COVER, no f(k) n^(o(k)) algorithm for k-CLIQUE, no 2^(o(√n)) algorithms for planar versions of many problems, and tight bounds in computational geometry and database query evaluation. Each of these conditional theorems is a domino standing on ETH.</p>`,
+  quick: [
+    { q: 'A polynomial-time reduction from A to B shows that', choices: ['if B has a fast algorithm, so does A', 'A and B are the same problem', 'B is easier than A', 'A is unsolvable'], answer: 0, why: 'Solve A by translating it to B. Hardness flows the other way: if A is hard, B is hard.' },
+    { q: 'Why does the 3-COLORING reduction preserve subexponential running time?', choices: ['It uses 3|V| variables, linear in the graph', 'It uses no clauses', 'Because there are only three colors', 'It does not'], answer: 0, why: 'A 2^(o(n)) SAT algorithm with n = 3|V| is a 2^(o(|V|)) coloring algorithm.' },
+    { q: 'The sparsification lemma lets ETH be stated for 3-CNFs with', choices: ['O(n) clauses', 'a single clause', 'n^3 clauses', 'no negated literals'], answer: 0, why: 'Impagliazzo, Paturi and Zane (2001) reduce any 3-CNF to few sparse ones, so linear reductions preserve ETH.' }
+  ],
+  mount(board, api) {
+    const V = ['A', 'B', 'C', 'D', 'E']; const E = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [0, 2]]; const COL = ['R', 'G', 'B'];
+    const colName = { R: 'red', G: 'green', B: 'blue' }; const colHex = { R: '#e0484f', G: '#2fa84f', B: '#2e6ee0' };
+    const pos = V.map((_, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; return [500 + 150 * Math.cos(a), 200 + 150 * Math.sin(a)]; });
+    const vid = (v, c) => v * 3 + c; const vname = (i) => `x(${V[Math.floor(i / 3)]},${COL[i % 3]})`;
+    let gadget = null; const vertexDone = new Set(), edgeDone = new Set(); const clauses = []; let phase = 'build'; let assign = Array(15).fill(false); let moves = 0; let solved = false;
+    const canvas = el('canvas', { width: 1000, height: 400, 'aria-label': 'graph with five vertices' });
+    const palette = el('div', { class: 'palette', role: 'group', 'aria-label': 'gadgets' });
+    const gV = el('button', { class: 'gadget', 'aria-pressed': 'false', onclick: () => select('v') }, 'Vertex gadget: at least one color (x(v,R) ∨ x(v,G) ∨ x(v,B))');
+    const gE = el('button', { class: 'gadget', 'aria-pressed': 'false', onclick: () => select('e') }, 'Edge gadget: endpoints differ (¬x(u,c) ∨ ¬x(v,c)) for each color c');
+    palette.append(gV, gE);
+    const targets = el('div', { class: 'row', style: 'margin-top:8px' }); const head = el('div', { class: 'board-head' });
+    const lamps = el('div', { class: 'lamps', style: 'margin-top:10px' }); const pickers = el('div', { class: 'switches', style: 'margin-top:10px' });
+    const status = el('div', { class: 'status', id: 'status' }); const foot = el('div', { class: 'row', style: 'margin-top:10px' });
+    board.append(head, palette, canvas, targets, pickers, lamps, status, foot);
+    function select(g) { gadget = g; gV.setAttribute('aria-pressed', String(g === 'v')); gE.setAttribute('aria-pressed', String(g === 'e')); api.sfx('click'); api.status(g === 'v' ? 'Vertex gadget selected. Tap a vertex.' : 'Edge gadget selected. Tap an edge.'); render(); }
+    function applyVertex(i) {
+      if (phase !== 'build') return; if (gadget !== 'v') { api.sfx('bad'); api.status('Select the vertex gadget first.'); return; }
+      if (vertexDone.has(i)) { api.sfx('bad'); api.status(`Vertex ${V[i]} already has its clause.`); return; }
+      vertexDone.add(i); clauses.push(COL.map((c, ci) => ({ v: vid(i, ci), s: true }))); api.sfx('good'); api.status(`Added (x(${V[i]},R) ∨ x(${V[i]},G) ∨ x(${V[i]},B)).`, 'good'); checkBuild();
+    }
+    function applyEdge(k) {
+      if (phase !== 'build') return; if (gadget !== 'e') { api.sfx('bad'); api.status('Select the edge gadget first.'); return; }
+      if (edgeDone.has(k)) { api.sfx('bad'); api.status('That edge already has its clauses.'); return; }
+      edgeDone.add(k); const [u, v] = E[k]; COL.forEach((c, ci) => clauses.push([{ v: vid(u, ci), s: false }, { v: vid(v, ci), s: false }]));
+      api.sfx('good'); api.status(`Added three clauses: ${V[u]} and ${V[v]} may not share red, green, or blue.`, 'good'); checkBuild();
+    }
+    function checkBuild() {
+      api.progress((vertexDone.size + edgeDone.size) / 22);
+      if (vertexDone.size === V.length && edgeDone.size === E.length) { phase = 'solve'; gadget = null; api.sfx('unlock'); api.status(`Formula complete: 15 variables, ${clauses.length} clauses. Now satisfy it by choosing a color per vertex.`, 'good'); }
+      render();
+    }
+    function pick(vi, ci) {
+      if (phase !== 'solve' || solved) return; moves++; api.sfx('click');
+      COL.forEach((_, k) => { assign[vid(vi, k)] = k === ci; });
+      const sat = countSat(clauses, assign);
+      if (sat === clauses.length) { solved = true; const s = moves <= 7 ? 3 : moves <= 12 ? 2 : 1; api.addScore(150 + s * 30); api.streakUp(); api.sfx('good'); api.sfx('star'); const r = canvas.getBoundingClientRect(); api.burst(r.left + r.width / 2, r.top + r.height / 2, 60); api.status(`Every clause satisfied in ${moves} picks. The assignment is a proper 3-coloring. ${s} star${s > 1 ? 's' : ''}.`, 'good'); api.progress(1); foot.innerHTML = ''; foot.append(el('button', { class: 'btn btn-primary', onclick: () => { api.sfx('click'); api.complete(s); } }, 'Finish level')); }
+      else api.status(`Lit ${sat} of ${clauses.length}.`);
+      render();
+    }
+    function colorOf(vi) { for (let k = 0; k < 3; k++) if (assign[vid(vi, k)]) return COL[k]; return null; }
+    function draw() {
+      const g = canvas.getContext('2d'); const W = canvas.width, H = canvas.height; g.fillStyle = cssVar('--bg2'); g.fillRect(0, 0, W, H);
+      E.forEach(([u, v], k) => { g.strokeStyle = edgeDone.has(k) ? cssVar('--true') : cssVar('--fg-dim'); g.lineWidth = edgeDone.has(k) ? 6 : 3; g.beginPath(); g.moveTo(pos[u][0], pos[u][1]); g.lineTo(pos[v][0], pos[v][1]); g.stroke();
+        if (phase === 'solve') { const cu = colorOf(u), cv = colorOf(v); if (cu && cv && cu === cv) { g.strokeStyle = cssVar('--false'); g.lineWidth = 8; g.setLineDash([10, 8]); g.beginPath(); g.moveTo(pos[u][0], pos[u][1]); g.lineTo(pos[v][0], pos[v][1]); g.stroke(); g.setLineDash([]); } } });
+      V.forEach((name, i) => { const [x, y] = pos[i]; const c = phase === 'solve' ? colorOf(i) : null; g.beginPath(); g.arc(x, y, 30, 0, Math.PI * 2); g.fillStyle = c ? colHex[c] : cssVar('--panel'); g.fill(); g.lineWidth = 4; g.strokeStyle = vertexDone.has(i) ? cssVar('--true') : cssVar('--fg'); g.stroke();
+        g.fillStyle = c ? '#ffffff' : cssVar('--fg'); g.font = 'bold 22px "Atkinson Hyperlegible", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(name, x, y); });
+      g.fillStyle = cssVar('--fg-dim'); g.font = '14px "Atkinson Hyperlegible", sans-serif'; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+      g.fillText(phase === 'build' ? `Gadgets placed: vertices ${vertexDone.size}/5, edges ${edgeDone.size}/6` : 'Choose a color for each vertex; a dashed edge means a clash.', 16, 28);
+    }
+    function render() {
+      head.innerHTML = ''; head.append(el('span', { class: 'pixel', text: phase === 'build' ? 'Phase 1: build the formula' : 'Phase 2: satisfy it' }), el('span', { text: `Variables 15  |  Clauses ${clauses.length}/23${phase === 'solve' ? `  |  Lit ${countSat(clauses, assign)}/${clauses.length}  |  Picks ${moves}` : ''}` }));
+      targets.innerHTML = '';
+      if (phase === 'build') { V.forEach((n, i) => targets.append(el('button', { class: 'btn btn-small' + (vertexDone.has(i) ? ' is-true' : ''), onclick: () => applyVertex(i) }, `Vertex ${n}`))); E.forEach(([u, v], k) => targets.append(el('button', { class: 'btn btn-small' + (edgeDone.has(k) ? ' is-true' : ''), onclick: () => applyEdge(k) }, `Edge ${V[u]}${V[v]}`))); }
+      pickers.innerHTML = '';
+      if (phase === 'solve') V.forEach((n, vi) => { const grp = el('div', { class: 'switch unset', role: 'group', 'aria-label': `color of ${n}`, style: 'min-width:120px' }, el('span', { text: `Vertex ${n}` }), el('div', { class: 'row', style: 'gap:4px' }, ...COL.map((c, ci) => el('button', { class: 'btn btn-small', style: `min-height:28px;padding:0 8px;${assign[vid(vi, ci)] ? `background:${colHex[c]};color:#fff;border-color:${colHex[c]}` : ''}`, 'aria-pressed': String(!!assign[vid(vi, ci)]), 'aria-label': `${n} ${colName[c]}`, onclick: () => pick(vi, ci) }, c)))); pickers.append(grp); });
+      lamps.innerHTML = '';
+      clauses.forEach(cl => { const st = clauseState(cl, phase === 'solve' ? assign : Array(15).fill(null)); const lamp = el('div', { class: 'lamp' + (st === 'sat' ? ' lit' : st === 'dead' ? ' dead' : '') }); cl.forEach((l, i) => { const v = phase === 'solve' ? litValue(l, assign) : null; lamp.append(el('span', { class: 'chip ' + (v === true ? 't' : v === false ? 'f' : 'u'), text: (l.s ? '' : '¬') + vname(l.v) })); if (i < cl.length - 1) lamp.append(el('span', { class: 'or', text: '∨' })); }); lamps.append(lamp); });
+      draw();
+    }
+    function hit(ev) {
+      const r = canvas.getBoundingClientRect(); const sx = canvas.width / r.width, sy = canvas.height / r.height; const p = ev.touches ? ev.touches[0] : ev; const x = (p.clientX - r.left) * sx, y = (p.clientY - r.top) * sy;
+      for (let i = 0; i < V.length; i++) { if (Math.hypot(x - pos[i][0], y - pos[i][1]) < 34) { applyVertex(i); return; } }
+      let best = -1, bd = 1e9; E.forEach(([u, v], k) => { const [ax, ay] = pos[u], [bx, by] = pos[v]; const dx = bx - ax, dy = by - ay; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); const d = Math.hypot(x - (ax + t * dx), y - (ay + t * dy)); if (d < bd) { bd = d; best = k; } });
+      if (best >= 0 && bd < 18) applyEdge(best);
+    }
+    canvas.addEventListener('click', hit);
+    render();
+    return { destroy: () => {}, debug: { finish: () => { select('v'); V.forEach((_, i) => applyVertex(i)); select('e'); E.forEach((_, k) => applyEdge(k)); [0, 1, 2, 0, 1].forEach((c, vi) => pick(vi, c)); } } };
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* L6: Count them all (#SAT by branching)                               */
+/* ------------------------------------------------------------------ */
+LEVELS.push({
+  id: 6, name: 'Count them all', blurb: 'Exact #SAT by branching.', title: 'Count them all',
+  idea: 'Deciding asks: is there one? Counting asks: how many? Counting is harder. Even #2-SAT is #P-complete although 2-SAT is easy.',
+  goal: 'Goal: branch on variables to split the formula until every leaf is trivial, then enter the exact number of satisfying assignments. Three formulas. Fewer branches, more stars.',
+  deeper: `<p>Leslie Valiant (1979) defined the class #P of counting problems and proved that computing the permanent of a 0-1 matrix is #P-complete, even though the matching decision problem it counts is in P. The same gap appears for formulas: 2-SAT is decidable in linear time, but #2-SAT, counting its satisfying assignments, is #P-complete. Toda's theorem (1991) says a single #P oracle is enough to decide every problem in the polynomial hierarchy, so exact counting sits well above NP.</p>
+  <p>Branching is the counting version of DPLL. Fixing x splits the assignments into those with x true and those with x false, and the counts add. A subformula with no clauses left and f free variables contributes 2^f; a subformula containing an empty clause contributes 0. Unit clauses are free: the branch violating them contributes nothing, so the game applies them automatically. Choosing the variable that appears most often keeps the tree small, which is exactly what exponential-time counting algorithms optimize.</p>
+  <p>The 2026 manuscript "The Exponential Time Hypothesis is False" claims an algorithm for exact counting, not just deciding, for every fixed clause width k at least 2, in time 2^(O(n log log n/√log n)) and polynomial space. For k = 3 the decision case alone would refute ETH; the counting claim is stronger still, and the k = 2 case would already be a subexponential algorithm for a #P-complete problem.</p>`,
+  quick: [
+    { q: '#2-SAT is', choices: ['#P-complete, although deciding 2-SAT is in P', 'in P', 'undecidable', 'the same problem as 2-SAT'], answer: 0, why: 'Counting can be hard even when existence is easy. Valiant proved this pattern for the permanent.' },
+    { q: 'Branching on x splits the count into', choices: ['count(x = T) + count(x = F)', 'count(x = T) × count(x = F)', 'the larger of the two', 'the smaller of the two'], answer: 0, why: 'The two sets of assignments are disjoint and cover everything, so counts add.' },
+    { q: 'A subformula with no clauses left and 3 free variables contributes', choices: ['8', '1', '3', '0'], answer: 0, why: 'Every assignment of the 3 free variables satisfies the empty set of clauses: 2^3 = 8.' }
+  ],
+  mount(board, api) {
+    const NS = [4, 5, 6]; let fi = 0, F, truth, root, branches, nextId; let seed = 9001 + (Date.now() % 777); let solvedCount = 0; const starsEarned = [];
+    const head = el('div', { class: 'board-head' }); const tree = el('div', { class: 'tree' }); const answer = el('div', { class: 'row', style: 'margin-top:12px' });
+    const status = el('div', { class: 'status', id: 'status' }); board.append(head, tree, answer, status);
+    function gen() {
+      const n = NS[fi]; let tries = 0;
+      do { seed += 7; const rand = mulberry(seed); const clauses = []; while (clauses.length < n) { const vars = []; while (vars.length < 3) { const v = Math.floor(rand() * n); if (!vars.includes(v)) vars.push(v); } clauses.push(vars.map(v => ({ v, s: rand() < 0.5 }))); } F = { n, clauses }; truth = bruteCount(n, clauses); tries++; } while ((truth === 0 || truth === pow2(n)) && tries < 50);
+    }
+    function simplify(clauses, assign) {
+      let a = assign.slice(); let cs = clauses; const forced = [];
+      for (;;) {
+        let out = []; let dead = false; let unit = null;
+        for (const c of cs) { const st = clauseState(c, a); if (st === 'sat') continue; if (st === 'dead') { dead = true; break; } const open = c.filter(l => litValue(l, a) === null); if (open.length === 1 && !unit) unit = open[0]; out.push(open); }
+        if (dead) return { clauses: [], assign: a, dead: true, forced };
+        if (!unit) return { clauses: out, assign: a, dead: false, forced };
+        a[unit.v] = unit.s; forced.push({ v: unit.v, s: unit.s }); cs = out;
+      }
+    }
+    function makeNode(assign, label) {
+      const s = simplify(F.clauses, assign); const free = s.assign.filter(x => x === null).length;
+      const node = { id: nextId++, label, assign: s.assign, clauses: s.clauses, dead: s.dead, free, forced: s.forced, children: null };
+      node.leaf = s.dead || s.clauses.length === 0; node.count = s.dead ? 0 : (s.clauses.length === 0 ? pow2(free) : null);
+      return node;
+    }
+    function newFormula() { gen(); nextId = 1; branches = 0; root = makeNode(Array(F.n).fill(null), 'start'); render(); api.status(`Formula ${fi + 1} of 3: ${F.n} variables, ${F.clauses.length} clauses, ${fmtInt(pow2(F.n))} possible assignments.`); }
+    function resolved(node) { if (node.leaf) return node.count; if (!node.children) return null; const a = resolved(node.children[0]), b = resolved(node.children[1]); return (a === null || b === null) ? null : a + b; }
+    function branch(node, v) {
+      branches++; api.sfx('click'); node.children = [makeNode(node.assign.map((x, i) => i === v ? true : x), `x${v + 1} = T`), makeNode(node.assign.map((x, i) => i === v ? false : x), `x${v + 1} = F`)];
+      api.status(`Branched on x${v + 1}. ${branches} branch${branches === 1 ? '' : 'es'} so far.`); render();
+    }
+    function clauseText(cs) { if (!cs.length) return '⊤  (no clauses left)'; return cs.map(c => '(' + c.map(litText).join(' ∨ ') + ')').join(' ∧ '); }
+    function renderNode(node, isRoot) {
+      const li = el('li'); const cnt = resolved(node);
+      const box = el('div', { class: 'node ' + (node.dead ? 'leaf-zero' : node.leaf ? 'leaf-ok' : (node.children ? '' : 'open')) });
+      box.append(el('div', { class: 'cl', html: `<b>${node.label}</b>${node.forced.length ? ' <span class="dim">forced: ' + node.forced.map(f => `x${f.v + 1}=${f.s ? 'T' : 'F'}`).join(', ') + '</span>' : ''}` }));
+      box.append(el('div', { class: 'cl', text: node.dead ? '⊥  (an empty clause: no assignment works)' : clauseText(node.clauses) }));
+      box.append(el('div', { class: 'dim', text: `${node.free} free variable${node.free === 1 ? '' : 's'}` }));
+      if (node.leaf) box.append(el('div', { class: 'cnt', text: node.dead ? 'count = 0' : `count = 2^${node.free} = ${node.count}` }));
+      else if (node.children) box.append(el('div', { class: 'cnt', text: isRoot ? 'count = ? (add the two children)' : (cnt === null ? 'count = pending' : `count = ${cnt}`) }));
+      else { const vars = new Set(); node.clauses.forEach(c => c.forEach(l => vars.add(l.v))); const row = el('div', { class: 'row', style: 'gap:4px' }); [...vars].sort((a, b) => a - b).forEach(v => row.append(el('button', { class: 'btn btn-small', style: 'min-height:28px', onclick: () => branch(node, v) }, `branch x${v + 1}`))); box.append(row); }
+      li.append(box);
+      if (node.children) { const ul = el('ul'); node.children.forEach(ch => ul.append(renderNode(ch, false))); li.append(ul); }
+      return li;
+    }
+    function render() {
+      head.innerHTML = ''; head.append(el('span', { class: 'pixel', text: `Formula ${fi + 1}/3` }), el('span', { text: `Branches ${branches}  |  True count hidden until you submit` }));
+      tree.innerHTML = ''; const ul = el('ul'); ul.append(renderNode(root, true)); tree.append(ul);
+      answer.innerHTML = '';
+      const ready = root.leaf || (root.children && resolved(root.children[0]) !== null && resolved(root.children[1]) !== null);
+      if (ready) {
+        const inp = el('input', { type: 'number', min: 0, id: 'count-input', 'aria-label': 'your count', style: 'font: inherit; padding: 8px; width: 140px; border: 2px solid var(--fg); background: var(--panel); color: var(--fg)' });
+        const btn = el('button', { class: 'btn btn-primary', onclick: () => check(parseInt(inp.value, 10)) }, 'Submit count');
+        inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') check(parseInt(inp.value, 10)); });
+        answer.append(el('label', { for: 'count-input', text: 'Satisfying assignments:' }), inp, btn);
+      } else answer.append(el('span', { class: 'dim', text: 'Keep branching until every leaf is resolved, then add up.' }));
+    }
+    function check(val) {
+      if (Number.isNaN(val)) { api.sfx('bad'); api.status('Enter a number.'); return; }
+      if (val === truth) { const n = F.n; const s = branches <= n ? 3 : branches <= 2 * n ? 2 : 1; starsEarned.push(s); solvedCount++; api.addScore(120 + s * 30); api.streakUp(); api.sfx('good'); api.sfx('star'); api.progress(solvedCount / 3); const r = tree.getBoundingClientRect(); api.burst(r.left + r.width / 2, r.top + 60, 50);
+        api.status(`Correct: ${truth} of ${fmtInt(pow2(n))} assignments satisfy the formula, found with ${branches} branches. ${s} star${s > 1 ? 's' : ''}.`, 'good');
+        answer.innerHTML = ''; answer.append(el('button', { class: 'btn btn-primary', onclick: () => { api.sfx('click'); fi++; if (fi < NS.length) newFormula(); else api.complete(Math.round(starsEarned.reduce((a, b) => a + b, 0) / starsEarned.length)); } }, fi + 1 < NS.length ? 'Next formula' : 'Finish level')); $('.btn-primary', answer).focus(); }
+      else { api.streakReset(); api.sfx('bad'); api.status(`${val} is not it. Add the two children of the start node again.`, 'bad'); }
+    }
+    newFormula();
+    return { destroy: () => {}, debug: { finish: () => { for (let i = 0; i < 3; i++) { starsEarned.push(3); } api.complete(3); }, truth: () => truth } };
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* L7 Boss: The hypotheses (dominoes, Lean check, recap, frontier)      */
+/* ------------------------------------------------------------------ */
+LEVELS.push({
+  id: 7, name: 'The hypotheses', blurb: 'Boss: what falls if ETH is false?', title: 'Boss: the hypotheses',
+  idea: 'Hypotheses stand on each other like dominoes. Knock one over and only its dependents fall.',
+  goal: 'Goal: assume ETH is false and judge each domino: falls, stands unchanged, or loses its support. Then audit three Lean statements against their informal claims. Then a six-question check.',
+  deeper: `<p>SETH, the Strong Exponential Time Hypothesis, says that for every ε greater than 0 there is a clause width k such that k-SAT cannot be solved in time 2^((1-ε)n): brute force is essentially optimal as clauses get wide. SETH implies ETH, so refuting ETH refutes SETH. ETH implies P is not equal to NP, but not conversely, so refuting ETH leaves P versus NP exactly where it was.</p>
+  <p>A conditional theorem of the form "if ETH then X" does not become false when ETH falls. It becomes vacuous: still a valid implication, but no longer evidence for X. Hundreds of such theorems exist, giving tight lower bounds for parameterized problems (k-CLIQUE needs n^(Ω(k)) time), for planar graph problems (2^(Ω(√n))), for problems in computational geometry and for database query evaluation. If ETH is false, each of those bounds reverts to an open question, and some may in fact be beatable.</p>
+  <p>A Lean proof is a different kind of object. The Lean kernel checks that a term has the stated type, relative to the definitions it imports and the axioms it uses (Lean's standard three: propositional extensionality, quotient soundness and choice, unless more are added). A zero count of <code>sorry</code> means no step was skipped. What the check cannot do is read the paper: whether the formal <code>IsKakeyaSet</code> or <code>PrimitiveMachine</code> matches the mathematician's notion is a human judgment about definitions, which is why OpenAI's repository ships "comparator" files that let a reviewer line up the formal statement against an independent one.</p>`,
+  quick: [
+    { q: 'If ETH is false, then SETH is', choices: ['false', 'true', 'unaffected', 'meaningless'], answer: 0, why: 'SETH implies ETH. The contrapositive: no ETH, no SETH.' },
+    { q: 'If ETH is false, then P ≠ NP is', choices: ['as open as before', 'false', 'true', 'proven'], answer: 0, why: 'ETH is stronger than P ≠ NP; losing the stronger statement says nothing about the weaker one.' },
+    { q: 'A theorem "under ETH, k-CLIQUE needs n^(Ω(k)) time" becomes', choices: ['vacuous: its hypothesis fails', 'false', 'a proof that k-CLIQUE is easy', 'an unconditional theorem'], answer: 0, why: 'The implication is still valid, but it no longer supports the bound.' },
+    { q: 'A Lean proof with zero sorry establishes', choices: ['the formal statement, relative to the library’s definitions and axioms', 'the informal claim in the paper', 'that the paper has no mistakes', 'nothing at all'], answer: 0, why: 'The kernel checks the formal statement. Matching it to the informal claim is a human job.' },
+    { q: 'The claimed running time 2^(O(n (log log n)²/√log n)) is', choices: ['2^(o(n)) but not 2^(n^ε)', 'polynomial', '2^(n^ε) for small ε', 'of the form 2^(cn) with c > 0'], answer: 0, why: 'The exponent is o(n), so ETH would fail, but it grows faster than every n^ε with ε < 1.' },
+    { q: 'Who decides whether the ETH claim is valid?', choices: ['Independent experts checking the proof and the formal statement', 'The Lean kernel alone', 'The company that announced it', 'Prediction markets'], answer: 0, why: 'Impagliazzo, Paturi and Williams organized an open examination and wrote that their involvement is not certification.' }
+  ],
+  mount(board, api) {
+    let points = 0; const stage = el('div', { class: 'stack' }); const status = el('div', { class: 'status', id: 'status' }); board.append(stage, status);
+    const DOM = [
+      { id: 'seth', title: 'SETH', desc: 'For every ε > 0 some k-SAT needs 2^((1-ε)n) time.', truth: 'falls', why: 'SETH implies ETH. If ETH fails, SETH fails.' },
+      { id: 'pnp', title: 'P ≠ NP', desc: 'No polynomial-time algorithm for NP-complete problems.', truth: 'stands', why: 'ETH is the stronger statement. Its failure leaves P vs NP open, exactly as before.' },
+      { id: 'clique', title: 'k-CLIQUE needs n^(Ω(k)) time, under ETH', desc: 'A conditional lower bound in parameterized complexity.', truth: 'unsupported', why: 'The implication stays valid but its hypothesis is gone. The bound is no longer supported; it might even be beatable.' },
+      { id: 'planar', title: 'Planar problems need 2^(Ω(√n)) time, under ETH', desc: 'Tight bounds for planar graph problems.', truth: 'unsupported', why: 'Same shape: a theorem of the form "if ETH then X" becomes vacuous, not false.' },
+      { id: 'subexp', title: 'NP ⊆ SUBEXP?', desc: 'Is every NP problem solvable in 2^(n^ε) time for every ε?', truth: 'stands', why: '2^(n/√log n) is nowhere near 2^(n^ε). The question stays open.' },
+      { id: 'count', title: '#2-SAT needs exponential time', desc: 'Counting solutions of 2-CNFs, a #P-complete problem.', truth: 'unsupported', why: 'If the claimed counting algorithm is correct it also covers k = 2, so this belief loses support too. (ETH alone does not imply it, but the same algorithm would decide both.)' }
+    ];
+    const VERDICTS = [['falls', 'Falls'], ['stands', 'Stands unchanged'], ['unsupported', 'Loses its support']];
+    function phaseA() {
+      stage.innerHTML = ''; let judged = 0;
+      stage.append(el('div', { class: 'board-head' }, el('span', { class: 'pixel', text: 'Phase 1: dominoes' })),
+        el('p', { style: 'font-weight:700', text: 'Assume the claim is right and ETH is false. For each domino, decide what happens.' }),
+        el('div', { class: 'domino fell', 'aria-label': 'ETH, knocked over' }, el('b', { text: 'ETH' }), el('span', { class: 'dim', text: 'Knocked over: 3-SAT has a 2^(o(n)) algorithm.' })));
+      const list = el('div', { class: 'dominoes' }); stage.append(list);
+      const cont = el('button', { class: 'btn btn-primary', disabled: true, onclick: () => { api.sfx('whoosh'); phaseB(); } }, 'Continue to the Lean audit');
+      DOM.forEach(d => {
+        const box = el('div', { class: 'domino' }); const verdict = el('div', { class: 'verdict' }); const row = el('div', { class: 'row' });
+        let done = false;
+        VERDICTS.forEach(([val, label]) => row.append(el('button', { class: 'btn btn-small', onclick: () => {
+          if (done) return; done = true; judged++; const ok = val === d.truth; box.classList.add(d.truth === 'falls' ? 'fell' : d.truth === 'stands' ? 'stands' : 'unsupported');
+          $$('.btn', row).forEach(b => { b.disabled = true; if (b.textContent === VERDICTS.find(v => v[0] === d.truth)[1]) b.classList.add('is-true'); });
+          if (ok) { points++; api.addScore(40); api.streakUp(); api.sfx(d.truth === 'falls' ? 'bad' : 'good'); verdict.textContent = 'Right. ' + d.why; } else { api.streakReset(); api.sfx('bad'); verdict.textContent = `No: it ${VERDICTS.find(v => v[0] === d.truth)[1].toLowerCase()}. ` + d.why; }
+          api.progress(judged / 12); if (judged === DOM.length) { cont.disabled = false; cont.focus(); }
+        } }, label)));
+        box.append(el('b', { text: d.title }), el('span', { class: 'dim', text: d.desc }), row, verdict); list.append(box);
+      });
+      stage.append(el('div', { class: 'row' }, cont));
+    }
+    const PAIRS = [
+      { informal: 'One algorithm counts k-SAT solutions in time 2^(o(n)), with the same constants for every k.', formal: 'theorem exact_count_and_sat (k : ℕ) (hk : 2 ≤ k) :\n  ∃ (M : PrimitiveMachine) (C A : ℝ) (d : ℕ),\n    ∀ (n : ℕ) (F : CNF n), WidthAtMost k F →\n      time M F ≤ runtimeBound C A d (bitLength F) n', answer: 'k', why: 'The machine and the constants C, A, d are chosen after k is fixed. The formal statement is "for each fixed k"; the informal sentence promised uniformity. (The real manuscript says "for fixed k", so there the informal claim is the careful one.)' },
+      { informal: 'A Turing machine decides 3-SAT in 2^(o(n)) time.', formal: 'structure PrimitiveMachine where\n  -- a custom multitape model with its own step relation\n  ...\ntheorem sat_fast : ∃ M : PrimitiveMachine,\n  ∀ F, WidthAtMost 3 F → time M F ≤ subexpBound F', answer: 'model', why: 'Lean proved a statement about PrimitiveMachine. That each of its steps costs at most polynomial Turing-machine time is a fact about the definitions. A reviewer has to read them; the kernel will not.' },
+      { informal: 'Every Kakeya set in ℝ^n has Hausdorff dimension n.', formal: 'theorem kakeya (n : ℕ) (hn : 2 ≤ n)\n    (F : Set (EuclideanSpace ℝ (Fin n))) (hF : IsKakeyaSet F) :\n    dimH F = n := by\n  sorry', answer: 'sorry', why: 'sorry tells Lean to accept the goal without proof. A single sorry anywhere in the dependency chain means the theorem resting on it was not proved. (This example is written for the game; the published Kakeya formalization reports no sorry.) Lean prints a warning; reviewers check the count is zero.' }
+    ];
+    const OPTS = [['faithful', 'Faithful'], ['k', 'Constants depend on k'], ['model', 'Machine model needs checking'], ['sorry', 'Contains a hole (sorry)']];
+    function phaseB() {
+      stage.innerHTML = ''; let judged = 0;
+      stage.append(el('div', { class: 'board-head' }, el('span', { class: 'pixel', text: 'Phase 2: Lean audit' })), el('p', { style: 'font-weight:700', text: 'Each pair shows an informal claim and a Lean statement written for this game. Does the formal statement deliver the informal one?' }));
+      const cont = el('button', { class: 'btn btn-primary', disabled: true, onclick: () => { api.sfx('fanfare'); api.complete(points >= 8 ? 3 : points >= 6 ? 2 : 1); } }, 'Face the six questions');
+      PAIRS.forEach((p, i) => {
+        const box = el('div', { class: 'pair' }); const why = el('div', { class: 'why' }); const row = el('div', { class: 'row' }); let done = false;
+        OPTS.forEach(([val, label]) => row.append(el('button', { class: 'btn btn-small', onclick: () => {
+          if (done) return; done = true; judged++; const ok = val === p.answer; $$('.btn', row).forEach(b => { b.disabled = true; if (b.textContent === OPTS.find(o => o[0] === p.answer)[1]) b.classList.add('is-true'); });
+          if (ok) { points++; api.addScore(50); api.streakUp(); api.sfx('good'); why.textContent = 'Right. ' + p.why; } else { api.streakReset(); api.sfx('bad'); why.textContent = `No: ${OPTS.find(o => o[0] === p.answer)[1].toLowerCase()}. ` + p.why; }
+          api.progress((6 + judged) / 12); if (judged === PAIRS.length) { cont.disabled = false; cont.focus(); }
+        } }, label)));
+        box.append(el('b', { text: `Pair ${i + 1}: informal claim` }), el('p', { text: p.informal }), el('b', { text: 'Lean statement' }), el('pre', { text: p.formal }), row, why); stage.append(box);
+      });
+      stage.append(el('div', { class: 'row' }, cont));
+    }
+    phaseA();
+    return { destroy: () => {}, debug: { finish: () => { points = 9; api.complete(3); } } };
+  },
+  recap() {
+    const wrap = el('div', { class: 'recap' });
+    wrap.append(el('h3', { text: 'What you now understand' }), el('ul', {},
+      el('li', { text: 'A 3-CNF formula is an AND of three-literal OR clauses. SAT asks for a satisfying assignment and is NP-complete (Cook, Levin, Karp).' }),
+      el('li', { text: 'Brute force costs 2^n. Every extra variable doubles it, and a constant-factor speedup only shifts n by a constant.' }),
+      el('li', { text: 'DPLL prunes with unit propagation and pure literals. The worst case is still 2^(cn); the best proven 3-SAT bounds are near 1.31^n.' }),
+      el('li', { text: 'Polynomial, quasi-polynomial, 2^(n^ε) and 2^(o(n)) are different regimes. A 2^(n/√log n) algorithm refutes ETH and nothing more.' }),
+      el('li', { text: 'Linear-size reductions carry subexponential algorithms between problems. With the sparsification lemma, ETH becomes a hub for hundreds of lower bounds.' }),
+      el('li', { text: 'Counting is harder than deciding. #2-SAT is #P-complete although 2-SAT is in P.' }),
+      el('li', { text: 'If ETH is false: SETH falls, ETH-conditional bounds lose their support, and P vs NP and NP ⊆ SUBEXP are untouched.' }),
+      el('li', { text: 'A Lean check certifies a formal statement relative to definitions, axioms and a machine model. Zero sorry is necessary, not sufficient, for the paper’s claim.' })));
+    wrap.append(el('div', { class: 'frontier' }, el('h3', { text: 'Where the frontier is (as of October 27, 2026)' }),
+      el('p', { html: 'On October 26, 2026 OpenAI announced that an internal model produced a manuscript titled <em>The Exponential Time Hypothesis is False</em> (dated October 25, 2026, public in the <code>openai/math</code> repository as family 378). It describes a deterministic algorithm that exactly counts the satisfying assignments of k-CNF formulas, for each fixed k ≥ 2, in time (n+m)^(O_k(1)) · 2^(O_k(n log log n/√log n)) using polynomial space. The case k = 3 would refute ETH; by the sparsification lemma the other fixed k would follow anyway.' }),
+      el('p', { html: 'The Lean-certified statement, declaration <code>OAI.Algorithms.SubexponentialSAT.SqrtLogSpace.exact_count_and_sat</code>, carries a slightly weaker exponent, O_k(n (log log n)²/√log n), and is stated for the library’s own multitape "primitive machine" model, with time counted as steps and space as visited tape cells.' }),
+      el('p', { html: 'An independent group organized by Russell Impagliazzo, Ramamohan Paturi and Ryan Williams is examining the claim. They wrote that their involvement "should not be taken as certification of the claim." As of this date the result is unreviewed. A Lean check certifies the formal statement relative to the library’s definitions and machine model; it does not certify the paper’s prose. Even if everything holds, the result does not imply P = NP, and it does not place 3-SAT in 2^(n^ε) time for any ε < 1.' })));
+    return wrap;
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* Field notes and sources                                              */
+/* ------------------------------------------------------------------ */
+const NOTES = {
+  glossary: [
+    ['Literal', 'A variable x or its negation ¬x.'],
+    ['Clause', 'An OR of literals. Satisfied when at least one literal is true.'],
+    ['CNF (conjunctive normal form)', 'An AND of clauses. k-CNF: every clause has at most k literals.'],
+    ['Assignment', 'A choice of true or false for every variable. A formula on n variables has 2^n of them.'],
+    ['SAT and 3-SAT', 'Does some assignment satisfy the formula? 3-SAT restricts to 3-CNF and is NP-complete; 2-SAT is solvable in linear time.'],
+    ['P', 'Problems solvable in time polynomial in the input size.'],
+    ['NP', 'Problems whose yes-instances have certificates checkable in polynomial time. P ⊆ NP; equality is open.'],
+    ['NP-complete', 'In NP, and every NP problem reduces to it in polynomial time. SAT was the first (Cook 1971, Levin 1973).'],
+    ['Reduction', 'A polynomial-time translation of instances of A into instances of B with the same answer. Fast B implies fast A.'],
+    ['Exponential time', 'Running times of the form 2^(cn) for a constant c > 0. 1.308^n is exponential: it is 2^(0.387n).'],
+    ['Subexponential, 2^(o(n))', 'The exponent grows slower than n. Includes 2^(n/√log n), which is still far above every 2^(n^ε).'],
+    ['SUBEXP', 'Problems solvable in 2^(n^ε) time for every ε > 0. Not known to contain NP.'],
+    ['ETH', 'Exponential Time Hypothesis (Impagliazzo, Paturi 2001): 3-SAT has no 2^(o(n)) algorithm. Implies P ≠ NP.'],
+    ['SETH', 'Strong ETH: for every ε > 0 there is k with no 2^((1-ε)n) algorithm for k-SAT. Implies ETH.'],
+    ['#P', 'Counting versions of NP problems (Valiant 1979). #2-SAT and the permanent are #P-complete.'],
+    ['Unit propagation', 'If all but one literal of a clause are false, the last literal must be true. The engine of DPLL and CDCL solvers.'],
+    ['Sparsification lemma', 'Impagliazzo, Paturi, Zane (2001): a k-CNF is equivalent to a small OR of k-CNFs with O(n) clauses each. Lets ETH be stated with linear-size formulas.'],
+    ['Lean', 'A proof assistant. Its kernel checks that a proof term has the stated type. A sorry marks an unproved goal; zero sorry means every step is checked, relative to the definitions and axioms used.']
+  ],
+  sources: [
+    'S. A. Cook, "The complexity of theorem-proving procedures," Proc. STOC 1971.',
+    'R. M. Karp, "Reducibility among combinatorial problems," in Complexity of Computer Computations, 1972.',
+    'M. Davis and H. Putnam, "A computing procedure for quantification theory," J. ACM 7 (1960).',
+    'M. Davis, G. Logemann and D. Loveland, "A machine program for theorem-proving," Comm. ACM 5 (1962).',
+    'R. Impagliazzo and R. Paturi, "On the complexity of k-SAT," J. Computer and System Sciences 62 (2001).',
+    'R. Impagliazzo, R. Paturi and F. Zane, "Which problems have strongly exponential complexity?," J. Computer and System Sciences 63 (2001).',
+    'R. Paturi, P. Pudlák, M. E. Saks and F. Zane, "An improved exponential-time algorithm for k-SAT," J. ACM 52 (2005).',
+    'D. Lokshtanov, D. Marx and S. Saurabh, "Lower bounds based on the Exponential Time Hypothesis," Bulletin of the EATCS 105 (2011).',
+    'L. G. Valiant, "The complexity of computing the permanent," Theoretical Computer Science 8 (1979).',
+    'R. Williams, "Some estimated likelihoods for computational complexity," in Computing and Software Science, LNCS 10000 (2019).',
+    'OpenAI, "The Exponential Time Hypothesis is False," manuscript dated October 25, 2026, openai/math repository, family 378 (unreviewed as of October 27, 2026).'
+  ]
+};
+
+/* ------------------------------------------------------------------ */
+/* Boot                                                                 */
+/* ------------------------------------------------------------------ */
+function startSound() { state.soundStarted = true; ensureAudio(); }
+function wire() {
+  $('#btn-play-sound').addEventListener('click', () => { startSound(); Audio.sfx('unlock'); showScreen('map'); renderMap(); });
+  $('#btn-play-muted').addEventListener('click', () => { showScreen('map'); renderMap(); });
+  for (const id of ['#map-music', '#lvl-music']) $(id).addEventListener('click', () => { if (!Audio.ready) { state.music = false; startSound(); } toggleMusic(); });
+  for (const id of ['#map-sfx', '#lvl-sfx']) $(id).addEventListener('click', () => { if (!Audio.ready) { state.sfx = false; startSound(); } toggleSfx(); });
+  $('#map-notes').addEventListener('click', () => { Audio.sfx('click'); openDrawer('notes'); });
+  $('#lvl-notes').addEventListener('click', () => { Audio.sfx('click'); openDrawer('notes'); });
+  $('#lvl-map').addEventListener('click', () => { Audio.sfx('click'); setTimer(false); showScreen('map'); renderMap(); });
+  $('#btn-skip').addEventListener('click', () => { state.unlockedAll = true; save(); Audio.sfx('unlock'); renderMap(); live('All levels unlocked.'); });
+  const resetBtn = $('#btn-reset'); let armed = null;
+  resetBtn.addEventListener('click', () => {
+    if (armed) { clearTimeout(armed); armed = null; resetBtn.textContent = 'Reset progress'; resetProgress(); Audio.sfx('whoosh'); return; }
+    resetBtn.textContent = 'Tap again to confirm reset'; Audio.sfx('click'); armed = setTimeout(() => { armed = null; resetBtn.textContent = 'Reset progress'; }, 4000);
+  });
+  document.addEventListener('click', () => { if (state.soundStarted) Audio.resume(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const d = $('#drawer-root .drawer'); if (d) d.remove(); } });
+  const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq && mq.addEventListener) mq.addEventListener('change', () => { drawWall($('#hero-wall'), 10, { label: false }); if (state.screen === 'map') renderMap(); });
+}
+function start(data) {
+  load(); wire(); syncAudioButtons(); drawWall($('#hero-wall'), 10, { label: false }); updateHud();
+  if (data && data.screen === 'level' && data.level) { showScreen('map'); renderMap(); startLevel(data.level); }
+  else if (data && data.screen === 'map') { showScreen('map'); renderMap(); }
+  else showScreen('title');
+}
+try { window.claude?.hot?.snapshot?.(() => ({ screen: state.screen, level: state.level })); } catch (e) { /* no hot module */ }
+window.__game = {
+  state, LEVELS,
+  gotoLevel: (i) => { if (state.screen === 'title') { showScreen('map'); renderMap(); } startLevel(i); },
+  completeLevel: () => { if (current && current.level) finishLevel(current.level, 3); },
+  current: () => current,
+  openMap: () => { showScreen('map'); renderMap(); }
+};
+if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
+})();
+</script>

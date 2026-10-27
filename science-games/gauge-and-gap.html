@@ -1,0 +1,1509 @@
+<title>Gauge &amp; Gap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,700;1,500&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Fira+Code:wght@400;600&display=swap">
+<style>
+/* Layout: chalkboard / graph-paper lab notebook. Sticky HUD, board left and lesson card right, stacking to one column at phone width. */
+:root{
+  --bg:#f3efe4; --grid:rgba(60,72,60,.13); --fg:#262a27; --muted:#636a62;
+  --panel:#fbf9f3; --panel-2:#ebe6d8; --line:#cfc8b5; --line-2:#b9b19b;
+  --accent:#c0412a; --accent-ink:#ffffff; --accent-soft:rgba(192,65,42,.12);
+  --energy:#5f7f00; --energy-soft:rgba(95,127,0,.18);
+  --link:#1d6693; --link-soft:rgba(29,102,147,.14);
+  --good:#2a7a4a; --bad:#ad3528; --warn:#9a6b00;
+  --shadow:0 1px 0 rgba(0,0,0,.04),0 10px 28px rgba(50,45,30,.10);
+  --font-display:"Spectral",Georgia,"Times New Roman",serif;
+  --font-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --radius:6px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f221c; --grid:rgba(240,240,228,.06); --fg:#f1efe6; --muted:#a4b1a7;
+    --panel:#163029; --panel-2:#1d3a32; --line:#2c4a41; --line-2:#3c6055;
+    --accent:#ff6b4a; --accent-ink:#1a0d08; --accent-soft:rgba(255,107,74,.16);
+    --energy:#d9f25e; --energy-soft:rgba(217,242,94,.16);
+    --link:#8fd3ff; --link-soft:rgba(143,211,255,.14);
+    --good:#7fd79c; --bad:#ff8f7e; --warn:#f0c454;
+    --shadow:0 1px 0 rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.4);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f221c; --grid:rgba(240,240,228,.06); --fg:#f1efe6; --muted:#a4b1a7;
+  --panel:#163029; --panel-2:#1d3a32; --line:#2c4a41; --line-2:#3c6055;
+  --accent:#ff6b4a; --accent-ink:#1a0d08; --accent-soft:rgba(255,107,74,.16);
+  --energy:#d9f25e; --energy-soft:rgba(217,242,94,.16);
+  --link:#8fd3ff; --link-soft:rgba(143,211,255,.14);
+  --good:#7fd79c; --bad:#ff8f7e; --warn:#f0c454;
+  --shadow:0 1px 0 rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.4);
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background-color:var(--bg); color:var(--fg);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px; background-position:0 0;
+  font-family:var(--font-body); font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.app{
+  max-width:1120px; margin-inline:auto; min-height:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 32px;
+}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.15;margin:0;text-wrap:balance}
+h1{font-size:clamp(2.2rem,5vw,3.4rem)}
+h2{font-size:clamp(1.4rem,3vw,1.9rem)}
+h3{font-size:1.15rem}
+p{margin:0}
+a{color:var(--link)}
+button{font:inherit;color:inherit}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.muted{color:var(--muted)}
+.energy{color:var(--energy)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+  padding:.6rem 1.05rem;border-radius:var(--radius);border:1.5px solid var(--line-2);
+  background:var(--panel);cursor:pointer;font-weight:700;font-size:.95rem;line-height:1.2;
+  transition:transform .08s ease,background .12s ease,border-color .12s ease;
+  min-height:42px;
+}
+.btn:hover{border-color:var(--fg)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,button:focus-visible,[tabindex]:focus-visible,details summary:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.small{padding:.35rem .7rem;min-height:34px;font-size:.85rem}
+.btn.ghost{background:transparent}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.on{background:var(--accent-soft);border-color:var(--accent)}
+.btn-row{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+
+/* HUD */
+.hud{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:20;
+  display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .9rem;
+  padding:.6rem 0 .5rem;background:var(--bg);
+  border-bottom:1.5px solid var(--line);margin-bottom:1rem;
+}
+.hud .title{font-family:var(--font-display);font-weight:700;font-size:1.15rem;min-width:0;flex:1 1 180px}
+.hud .title small{display:block;font-family:var(--font-body);font-weight:400;font-size:.72rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.chip{font-family:var(--font-mono);font-size:.8rem;padding:.25rem .55rem;border:1px solid var(--line);border-radius:999px;background:var(--panel);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip b{color:var(--accent)}
+.hud .tools{display:flex;gap:.4rem;flex-wrap:wrap}
+.progress{height:4px;background:var(--panel-2);border-radius:2px;overflow:hidden;flex:1 0 100%}
+.progress > i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s ease}
+
+/* title screen */
+.title-screen{display:grid;gap:1.6rem;padding-block:3rem 2rem;max-width:720px}
+.title-screen .promise{font-size:1.15rem;max-width:60ch}
+.title-screen ul{margin:0;padding-left:1.1rem;display:grid;gap:.3rem;max-width:62ch}
+.lattice-hero{width:100%;max-width:560px;aspect-ratio:3/1.2;display:block}
+.board-note{font-size:.85rem;color:var(--muted)}
+
+/* map */
+.map{display:grid;gap:1.2rem;padding-block:1rem}
+.map-path{display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.node{
+  display:grid;gap:.3rem;text-align:left;padding:.8rem .9rem;border:1.5px solid var(--line);border-radius:var(--radius);
+  background:var(--panel);cursor:pointer;position:relative;min-height:112px;
+}
+.node:hover{border-color:var(--accent)}
+.node .num{font-family:var(--font-mono);font-size:.75rem;color:var(--muted)}
+.node .name{font-family:var(--font-display);font-weight:700;font-size:1.05rem}
+.node .topic{font-size:.8rem;color:var(--muted)}
+.node .stars{font-family:var(--font-mono);font-size:.85rem;color:var(--warn);letter-spacing:.1em}
+.node.locked{opacity:.55}
+.node.done{border-color:var(--good)}
+.node.boss{border-style:double;border-width:3px}
+
+/* level layout */
+.level{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:1.2rem;align-items:start}
+@media (max-width:860px){.level{grid-template-columns:1fr}}
+.board{display:grid;gap:.8rem;min-width:0}
+.board canvas{display:block;width:100%;height:auto;border:1.5px solid var(--line);border-radius:var(--radius);background:var(--panel);touch-action:none;max-width:100%}
+.side{display:grid;gap:.9rem;min-width:0}
+.card{background:var(--panel);border:1.5px solid var(--line);border-radius:var(--radius);padding:1rem 1.05rem;box-shadow:var(--shadow);display:grid;gap:.55rem}
+.card .goal{border-left:3px solid var(--accent);padding-left:.7rem;font-weight:700}
+.card .goal.done{border-color:var(--good)}
+details.deeper{border:1.5px dashed var(--line);border-radius:var(--radius);padding:.6rem .9rem}
+details.deeper summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.deeper summary::after{content:"+";font-family:var(--font-mono);color:var(--accent)}
+details.deeper[open] summary::after{content:"\2212"}
+details.deeper .body{display:grid;gap:.6rem;padding-top:.6rem;max-width:62ch;font-size:.95rem}
+.controls{display:grid;gap:.6rem;background:var(--panel);border:1.5px solid var(--line);border-radius:var(--radius);padding:.8rem .9rem}
+.controls .row{display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center}
+.controls label{display:flex;align-items:center;gap:.5rem;font-size:.9rem;min-width:0}
+.controls input[type=range]{width:160px;max-width:40vw;accent-color:var(--accent)}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.5rem}
+.readout{background:var(--panel-2);border-radius:var(--radius);padding:.5rem .65rem;min-width:0}
+.readout .k{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.readout .v{font-family:var(--font-mono);font-size:1.05rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.status{font-size:.92rem;min-height:1.4em}
+.status.good{color:var(--good)} .status.bad{color:var(--bad)}
+table.data{width:100%;border-collapse:collapse;font-size:.85rem;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+table.data th,table.data td{text-align:right;padding:.3rem .4rem;border-bottom:1px solid var(--line)}
+table.data th:first-child,table.data td:first-child{text-align:left}
+.table-wrap{overflow-x:auto}
+
+/* quick check & overlays */
+.overlay{position:fixed;inset:0;z-index:40;background:rgba(10,20,16,.55);display:grid;place-items:center;padding:16px}
+.dialog{background:var(--panel);border:1.5px solid var(--line-2);border-radius:8px;box-shadow:var(--shadow);width:min(640px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:1.2rem 1.25rem;display:grid;gap:.9rem}
+.dialog .q{font-family:var(--font-display);font-size:1.2rem;font-weight:700}
+.options{display:grid;gap:.5rem}
+.opt{text-align:left;padding:.7rem .9rem;border:1.5px solid var(--line);border-radius:var(--radius);background:var(--panel-2);cursor:pointer;font-size:.95rem}
+.opt:hover{border-color:var(--fg)}
+.opt.correct{border-color:var(--good);background:color-mix(in srgb,var(--good) 18%,var(--panel))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 16%,var(--panel))}
+.opt[disabled]{cursor:default}
+.feedback{font-size:.95rem;min-height:1.5em}
+.feedback.good{color:var(--good)} .feedback.bad{color:var(--bad)}
+.dialog .count{font-family:var(--font-mono);font-size:.8rem;color:var(--muted)}
+
+/* drawer */
+.drawer{position:fixed;top:env(safe-area-inset-top,0px);right:0;bottom:0;z-index:45;width:min(520px,100%);background:var(--panel);border-left:1.5px solid var(--line-2);box-shadow:var(--shadow);display:grid;grid-template-rows:auto auto 1fr;padding-right:env(safe-area-inset-right,0px)}
+.drawer header{display:flex;justify-content:space-between;align-items:center;padding:.8rem 1rem;border-bottom:1.5px solid var(--line)}
+.tabs{display:flex;gap:.3rem;padding:.6rem 1rem 0}
+.tab{padding:.4rem .8rem;border:1.5px solid var(--line);border-bottom:none;border-radius:6px 6px 0 0;background:var(--panel-2);cursor:pointer;font-weight:700;font-size:.9rem}
+.tab.on{background:var(--panel);border-color:var(--line-2)}
+.drawer .content{overflow:auto;padding:1rem;border-top:1.5px solid var(--line-2)}
+dl.gloss{margin:0;display:grid;gap:.7rem}
+dl.gloss dt{font-weight:700;font-family:var(--font-display);font-size:1.02rem}
+dl.gloss dd{margin:0;font-size:.93rem;max-width:60ch}
+.sources{margin:0;padding-left:1.1rem;display:grid;gap:.45rem;font-size:.9rem}
+
+/* recap */
+.recap{display:grid;gap:1.2rem;max-width:760px;padding-block:1rem}
+.recap ul{margin:0;padding-left:1.1rem;display:grid;gap:.4rem}
+.frontier{border-left:4px solid var(--accent);padding:.2rem 0 .2rem 1rem;display:grid;gap:.6rem;max-width:66ch}
+
+/* sort level */
+.sort-area{display:grid;gap:.8rem}
+.bins{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem}
+@media (max-width:600px){.bins{grid-template-columns:1fr}}
+.bin{min-height:120px;border:2px dashed var(--line-2);border-radius:var(--radius);padding:.5rem;display:grid;gap:.4rem;align-content:start;background:var(--panel)}
+.bin.over{border-color:var(--accent);background:var(--accent-soft)}
+.bin h4{margin:0;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.deck{display:flex;flex-wrap:wrap;gap:.5rem;min-height:56px}
+.tcard{padding:.5rem .7rem;border:1.5px solid var(--line-2);border-radius:var(--radius);background:var(--panel-2);cursor:grab;font-size:.9rem;user-select:none;touch-action:none;position:relative}
+.tcard.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.tcard.placed{cursor:default;background:var(--panel);font-size:.85rem}
+.tcard.placed small{display:block;color:var(--muted);font-size:.78rem}
+.tcard.dragging{opacity:.85;z-index:60;pointer-events:none;position:fixed}
+.tcard.shake{animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.axioms{display:grid;gap:.4rem;margin:0;padding-left:1.1rem;font-size:.93rem}
+
+/* predictions */
+.theories{display:grid;gap:.5rem}
+.theory{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between;padding:.6rem .75rem;border:1.5px solid var(--line);border-radius:var(--radius);background:var(--panel-2)}
+.theory .nm{font-weight:700}
+.theory .nm small{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.theory .verdict{font-family:var(--font-mono);font-size:.85rem}
+
+/* fx + toast */
+.fx{position:fixed;inset:0;pointer-events:none;z-index:50}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:55;background:var(--fg);color:var(--bg);padding:.6rem 1rem;border-radius:999px;font-size:.9rem;opacity:0;transition:opacity .2s;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1}
+.badge{display:inline-block;padding:.15rem .5rem;border-radius:999px;font-size:.75rem;font-weight:700;letter-spacing:.04em;background:var(--energy-soft);color:var(--energy)}
+.badge.flash{animation:flash .5s ease}
+@keyframes flash{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+.done-panel{display:grid;gap:.8rem;padding:1rem;border:1.5px solid var(--good);border-radius:var(--radius);background:var(--panel)}
+.stars-big{font-family:var(--font-mono);font-size:1.6rem;color:var(--warn);letter-spacing:.15em}
+.kbd{font-family:var(--font-mono);font-size:.8rem;border:1px solid var(--line-2);border-radius:4px;padding:0 .3rem;background:var(--panel-2)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="app" id="app">
+  <header class="hud" id="hud" hidden>
+    <div class="title"><small id="hud-eyebrow">Level 1 of 7</small><span id="hud-title">Paint a field</span></div>
+    <div class="chips">
+      <span class="chip">Score <b id="hud-score">0</b></span>
+      <span class="chip">Streak <b id="hud-streak">0</b></span>
+      <span class="chip">Time <b id="hud-timer">0:00</b></span>
+    </div>
+    <div class="tools">
+      <button class="btn small on" id="btn-music" aria-pressed="true" title="Toggle music">Music</button>
+      <button class="btn small on" id="btn-sfx" aria-pressed="true" title="Toggle sound effects">SFX</button>
+      <button class="btn small" id="btn-notes" title="Open field notes">Notes</button>
+      <button class="btn small" id="btn-map" title="Back to the map">Map</button>
+    </div>
+    <div class="progress" aria-hidden="true"><i id="hud-progress"></i></div>
+  </header>
+  <main id="main"></main>
+</div>
+<aside class="drawer" id="drawer" hidden aria-label="Field notes and sources">
+  <header><h3>Field notes</h3><button class="btn small" id="drawer-close">Close</button></header>
+  <div class="tabs" role="tablist">
+    <button class="tab on" role="tab" data-tab="gloss" id="tab-gloss">Glossary</button>
+    <button class="tab" role="tab" data-tab="sources" id="tab-sources">Sources</button>
+  </div>
+  <div class="content" id="drawer-content"></div>
+</aside>
+<div id="overlay-root"></div>
+<canvas class="fx" id="fx" aria-hidden="true"></canvas>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+/* ---------- utilities ---------- */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const wrapAngle = a => { a = a % TAU; if (a < 0) a += TAU; return a; };
+const angDiff = (a, b) => { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if (d <= -Math.PI) d += TAU; return d; };
+const fmt = (v, d = 3) => Number.isFinite(v) ? v.toFixed(d) : '–';
+const pct = v => Number.isFinite(v) ? (v * 100).toFixed(1) + '%' : '–';
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const rand = (a = 0, b = 1) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') node.className = v;
+    else if (k === 'html') node.innerHTML = v;
+    else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+    else if (k === 'dataset') Object.assign(node.dataset, v);
+    else if (v === true) node.setAttribute(k, '');
+    else node.setAttribute(k, v);
+  }
+  for (const c of children.flat()) {
+    if (c === null || c === undefined || c === false) continue;
+    node.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  return node;
+}
+
+function fitCanvas(canvas, aspect, maxH = 560) {
+  const parent = canvas.parentElement;
+  const w = Math.max(240, Math.floor(parent.clientWidth || 600));
+  let h = Math.round(w / aspect);
+  if (h > maxH) h = maxH;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w, h };
+}
+function canvasPos(canvas, e) {
+  const r = canvas.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = canvas.width / dpr, h = canvas.height / dpr;
+  return { x: (e.clientX - r.left) * w / r.width, y: (e.clientY - r.top) * h / r.height };
+}
+function theme() {
+  return {
+    bg: cssVar('--bg'), panel: cssVar('--panel'), panel2: cssVar('--panel-2'), fg: cssVar('--fg'), muted: cssVar('--muted'),
+    line: cssVar('--line'), line2: cssVar('--line-2'), accent: cssVar('--accent'), energy: cssVar('--energy'), link: cssVar('--link'),
+    good: cssVar('--good'), bad: cssVar('--bad'), warn: cssVar('--warn'), mono: cssVar('--font-mono') || 'monospace', body: cssVar('--font-body') || 'sans-serif'
+  };
+}
+function withAlpha(color, a) {
+  // accepts #rrggbb or rgb()/rgba(); returns rgba string
+  color = color.trim();
+  if (color.startsWith('#')) {
+    const n = color.length === 4 ? color.slice(1).split('').map(c => c + c).join('') : color.slice(1);
+    const r = parseInt(n.slice(0, 2), 16), g = parseInt(n.slice(2, 4), 16), b = parseInt(n.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  const m = color.match(/[\d.]+/g);
+  if (m && m.length >= 3) return `rgba(${m[0]},${m[1]},${m[2]},${a})`;
+  return color;
+}
+
+/* ---------- audio engine (procedural spectral drone + synthesized SFX) ---------- */
+const Audio = (() => {
+  let ctx = null, master, comp, musicBus, sfxBus, noiseBuf;
+  let musicOn = true, sfxOn = true;
+  let drone = null, sched = null, nextBeat = 0, beat = 0, bar = 0;
+  let brightness = 0.5, density = 0.4, root = 110, lastTick = 0;
+  const ROOTS = [110, 130.81, 146.83, 164.81, 196.0];
+  const PENTA = [1, 1.2, 4 / 3, 1.5, 1.8];
+  const BPM = 56;
+
+  function init() {
+    if (ctx) return true;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      ctx = new AC();
+      master = ctx.createGain(); master.gain.value = 0.45;
+      comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -18; comp.knee.value = 20; comp.ratio.value = 4; comp.attack.value = 0.01; comp.release.value = 0.25;
+      master.connect(comp); comp.connect(ctx.destination);
+      musicBus = ctx.createGain(); musicBus.gain.value = 0.25; musicBus.connect(master);
+      sfxBus = ctx.createGain(); sfxBus.gain.value = 0.6; sfxBus.connect(master);
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      buildDrone();
+      startScheduler();
+      return true;
+    } catch (e) { ctx = null; return false; }
+  }
+  function resume() { if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {}); }
+  function now() { return ctx ? ctx.currentTime : 0; }
+
+  function buildDrone() {
+    const g = ctx.createGain(); g.gain.value = musicOn ? 1 : 0;
+    const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 900; filter.Q.value = 0.6;
+    filter.connect(g); g.connect(musicBus);
+    const ratios = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
+    const partials = ratios.map((r, i) => {
+      const osc = ctx.createOscillator(); osc.type = 'sine';
+      const detune = 1 + (Math.random() - 0.5) * 0.006;
+      osc.frequency.value = root * r * detune;
+      const pg = ctx.createGain(); const base = 0.2 / Math.pow(r, 0.85); pg.gain.value = base;
+      const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.04 + Math.random() * 0.12;
+      const lg = ctx.createGain(); lg.gain.value = base * 0.55; lfo.connect(lg); lg.connect(pg.gain);
+      osc.connect(pg); pg.connect(filter); osc.start(); lfo.start();
+      return { osc, pg, lfo, r, detune };
+    });
+    const saw = ctx.createOscillator(); saw.type = 'sawtooth'; saw.frequency.value = root * 0.5;
+    const sg = ctx.createGain(); sg.gain.value = 0.045; saw.connect(sg); sg.connect(filter); saw.start();
+    const ns = ctx.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 0.5;
+    const ng = ctx.createGain(); ng.gain.value = 0;
+    ns.connect(bp); bp.connect(ng); ng.connect(g); ns.start();
+    drone = { g, filter, partials, saw, noiseGain: ng };
+  }
+  function changeRoot() {
+    let r = pick(ROOTS); if (r === root) r = ROOTS[(ROOTS.indexOf(r) + 1) % ROOTS.length];
+    root = r; const t = ctx.currentTime;
+    drone.partials.forEach(p => { p.osc.frequency.cancelScheduledValues(t); p.osc.frequency.setValueAtTime(p.osc.frequency.value, t); p.osc.frequency.exponentialRampToValueAtTime(root * p.r * p.detune, t + 4); });
+    drone.saw.frequency.cancelScheduledValues(t); drone.saw.frequency.setValueAtTime(drone.saw.frequency.value, t); drone.saw.frequency.exponentialRampToValueAtTime(root * 0.5, t + 4);
+  }
+  function bell(f, t, gain, decay, dest) {
+    dest = dest || sfxBus;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(gain, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    g.connect(dest);
+    [[1, 1], [2.76, 0.28], [5.4, 0.07]].forEach(([r, a]) => {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f * r;
+      const og = ctx.createGain(); og.gain.value = a; o.connect(og); og.connect(g); o.start(t); o.stop(t + decay + 0.05);
+    });
+  }
+  function startScheduler() {
+    nextBeat = ctx.currentTime + 0.2;
+    sched = setInterval(() => {
+      if (!ctx) return;
+      while (nextBeat < ctx.currentTime + 0.12) { scheduleBeat(nextBeat); nextBeat += 60 / BPM; }
+    }, 25);
+  }
+  function scheduleBeat(t) {
+    beat++;
+    if (beat % 4 === 0) { bar++; if (bar % 16 === 0) changeRoot(); }
+    if (!musicOn) return;
+    if (Math.random() < density) {
+      const oct = Math.random() < 0.5 ? 2 : 4;
+      const f = root * pick(PENTA) * oct;
+      bell(f, t, 0.1 + Math.random() * 0.06, 1.8 + Math.random() * 1.2, musicBus);
+    }
+  }
+  function env(g, t, a, d, peak) { const p = g.gain; p.cancelScheduledValues(t); p.setValueAtTime(0.0001, t); p.linearRampToValueAtTime(peak, t + a); p.exponentialRampToValueAtTime(0.0001, t + a + d); }
+  function tone(type, f0, f1, t, a, d, peak) {
+    const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + a + d);
+    const g = ctx.createGain(); env(g, t, a, d, peak); o.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + a + d + 0.05);
+  }
+  function noise(t, d, peak, type, f0, f1, q) {
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(f0, t);
+    if (f1) f.frequency.exponentialRampToValueAtTime(f1, t + d); f.Q.value = q || 0.8;
+    const g = ctx.createGain(); env(g, t, 0.01, d, peak); s.connect(f); f.connect(g); g.connect(sfxBus); s.start(t); s.stop(t + d + 0.1);
+  }
+  const SFX = {
+    click: t => tone('sine', 620, 330, t, 0.004, 0.07, 0.2),
+    hover: t => tone('sine', 1250, 1250, t, 0.003, 0.03, 0.025),
+    good: t => { bell(523.25, t, 0.2, 0.9); bell(783.99, t + 0.03, 0.16, 0.9); },
+    bad: t => { tone('sine', 140, 55, t, 0.005, 0.18, 0.28); noise(t, 0.12, 0.1, 'lowpass', 500, 120); },
+    tick: t => tone('triangle', 2100, 1900, t, 0.002, 0.02, 0.07),
+    whoosh: t => noise(t, 0.45, 0.16, 'bandpass', 300, 3200, 1.2),
+    fanfare: t => { [440, 523.25, 659.25, 880, 1046.5].forEach((f, i) => bell(f, t + i * 0.1, 0.18, 2.2)); },
+    unlock: t => { tone('sine', 440, 660, t, 0.01, 0.15, 0.14); tone('sine', 660, 990, t + 0.12, 0.01, 0.22, 0.14); },
+    star: t => { tone('sine', 1568, 1568, t, 0.004, 0.25, 0.1); tone('sine', 2093, 2093, t + 0.05, 0.004, 0.3, 0.08); }
+  };
+  function sfx(name) {
+    if (!ctx || !sfxOn || !SFX[name]) return;
+    if (name === 'tick') { const n = performance.now(); if (n - lastTick < 50) return; lastTick = n; }
+    try { SFX[name](ctx.currentTime); } catch (e) { /* no-op */ }
+  }
+  function setMusic(on) { musicOn = on; if (drone) drone.g.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, 0.15); }
+  function setSfx(on) { sfxOn = on; }
+  function setBrightness(x) { brightness = clamp(x, 0, 1); if (drone) drone.filter.frequency.setTargetAtTime(lerp(380, 3400, brightness), ctx.currentTime, 0.25); }
+  function setNoise(x) { if (drone) drone.noiseGain.gain.setTargetAtTime(clamp(x, 0, 1) * 0.085, ctx.currentTime, 0.3); }
+  function setDensity(x) { density = clamp(x, 0, 1); }
+  return { init, resume, sfx, setMusic, setSfx, setBrightness, setNoise, setDensity, get active() { return !!ctx; } };
+})();
+
+/* ---------- particles ---------- */
+const FX = (() => {
+  const canvas = $('#fx'); const ctx = canvas.getContext('2d'); let parts = []; let raf = 0;
+  function size() { const dpr = Math.min(2, window.devicePixelRatio || 1); canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  size(); addEventListener('resize', size);
+  function burst(x, y, color, n = 24) {
+    if (reduceMotion()) n = Math.min(n, 6);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, s = 80 + Math.random() * 220;
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, life: 0.7 + Math.random() * 0.5, t: 0, color, r: 2 + Math.random() * 3 });
+    }
+    if (!raf) raf = requestAnimationFrame(step);
+  }
+  let last = 0;
+  function step(ts) {
+    const dt = Math.min(0.05, (ts - (last || ts)) / 1000); last = ts;
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    parts = parts.filter(p => p.t < p.life);
+    for (const p of parts) {
+      p.t += dt; p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      ctx.globalAlpha = 1 - p.t / p.life; ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.r, p.r);
+    }
+    ctx.globalAlpha = 1;
+    if (parts.length) raf = requestAnimationFrame(step); else { raf = 0; last = 0; ctx.clearRect(0, 0, innerWidth, innerHeight); }
+  }
+  function burstAt(elm, color, n) { const r = elm.getBoundingClientRect(); burst(r.left + r.width / 2, r.top + r.height / 2, color, n); }
+  return { burst, burstAt };
+})();
+
+let toastTimer = 0;
+function toast(msg, ms = 2400) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+/* ---------- lesson content ---------- */
+const LEVELS = [
+  {
+    id: 'field', title: 'Paint a field', topic: 'Fields and the action',
+    card: `A field is a number at every point. The action scores a whole configuration at once: neighbors that disagree cost action, and so does sitting away from the two valleys of the potential at φ = ±1. Quantum field theory weighs every configuration by e<sup>−S</sup>.`,
+    goal: `Goal 1: paint the grid down to an action below 1. Goal 2: build a wall between a +1 region and a −1 region and read what it costs.`,
+    deeper: `<p>In classical mechanics the action S is the time integral of the Lagrangian, and the path a system actually takes makes S stationary. Feynman's 1948 formulation of quantum mechanics keeps every path and weights it by the phase e<sup>iS/ħ</sup>. Rotating time to imaginary values (the Wick rotation) turns that oscillating phase into a real, decaying weight e<sup>−S<sub>E</sub></sup>, with S<sub>E</sub> the Euclidean action. The quantum theory then becomes a problem in statistical mechanics: a probability distribution over field configurations, exactly like a Boltzmann factor e<sup>−E/kT</sup>.</p>
+<p>The action on this board is a lattice version of the Euclidean φ⁴ action. The gradient term ½(φ(x+μ) − φ(x))² penalizes disagreement between neighbors; the potential (λ/4)(φ² − 1)² has two valleys at φ = ±1. Those valleys are the vacua. A configuration has to pick one, and either pick breaks the symmetry φ → −φ of the action itself: spontaneous symmetry breaking. A wall between a +1 region and a −1 region costs action proportional to its length, which is why large uniform domains dominate the sum. Shrink the lattice spacing to zero while adjusting λ so that physical quantities stay fixed and you have a quantum field theory, if the limit exists.</p>`,
+    questions: [
+      { q: 'Which configuration has the lowest action?', opts: ['φ = +1 everywhere', 'φ alternating +1, −1, +1, −1 between neighbors', 'φ = 0 everywhere'], a: 0, why: 'A uniform field in a valley has zero gradient cost and zero potential cost. Alternating signs maximize the gradient term; φ = 0 sits on top of the potential barrier.' },
+      { q: 'Doubling the action S does what to the weight e^−S?', opts: ['Halves it', 'Squares it', 'Leaves it unchanged'], a: 1, why: 'e^−2S = (e^−S)². Large-action configurations are suppressed exponentially, not linearly.' },
+      { q: 'A wall between a +1 region and a −1 region costs action because', opts: ['inside the wall the field is far from both valleys and changes quickly', 'the field must vanish at infinity', 'λ becomes negative in the wall'], a: 0, why: 'Crossing from +1 to −1 forces large neighbor differences and passes through the potential barrier at φ = 0. Both terms charge for it.' }
+    ]
+  },
+  {
+    id: 'gauge', title: 'Spin the gauge', topic: 'Gauge invariance',
+    card: `Every link carries a phase, drawn as an arrow. Around each small square, the plaquette, the phases add up to a curvature. Spin all the links at one site together: the arrows change but every plaquette stays put. Gauge symmetry is a redundancy in the description. The physics lives in the plaquettes.`,
+    goal: `Goal: perform three gauge transformations in the sandbox, then solve three matching puzzles using only gauge moves. One puzzle has no solution. Say so.`,
+    deeper: `<p>Hermann Weyl proposed in 1918 that physical law should not change when a local standard of length is redefined point by point; by 1929 the idea had taken its modern form, that electromagnetism is the theory of a local phase, a U(1) gauge symmetry. Yang and Mills generalized the phase to a matrix from a non-abelian group in 1954. The strong and weak interactions turned out to be exactly this kind of theory.</p>
+<p>On Wilson's lattice the gauge field lives on links as group elements, here a phase e<sup>iθ</sup>. Carrying a charge around a plaquette multiplies its wavefunction by e<sup>iθ<sub>P</sub></sup>. The plaquette angle θ<sub>P</sub> is the lattice version of the field strength F<sub>μν</sub>, the curvature of a connection; for a smooth field θ<sub>P</sub> ≈ a²F<sub>μν</sub>. A gauge transformation changes the description, not the physics, so anything measurable must be gauge invariant: plaquettes, Wilson loops, and correlations of such objects. On an open square lattice two configurations with identical plaquettes are always gauge equivalent. On a torus there are extra invariants, the holonomies around the two non-contractible cycles, so matching plaquettes is necessary but not sufficient there.</p>`,
+    questions: [
+      { q: 'After a gauge transformation at one site, what changes?', opts: ['The plaquettes around that site', 'The links touching that site', 'Nothing at all'], a: 1, why: 'Only the four links at that site change. Going around any neighbouring plaquette you enter the site along one link and leave along another; the gauge change adds −α on the way in and +α on the way out, so the plaquette sum is untouched.' },
+      { q: 'Which of these could be a physical observable?', opts: ['A single link angle θ', 'A plaquette angle, or a Wilson loop', 'The gauge parameter α'], a: 1, why: 'Observables must not depend on the choice of gauge. Link angles and α are description, not physics.' },
+      { q: 'On an open square lattice, two configurations with identical plaquettes everywhere are', opts: ['always related by a gauge transformation', 'never related by a gauge transformation', 'related only if their links already match'], a: 0, why: 'On a simply connected lattice the plaquettes determine the configuration up to gauge. On a torus you would also need the two holonomies.' }
+    ]
+  },
+  {
+    id: 'mc', title: 'Run the lattice', topic: 'Monte Carlo and the continuum limit',
+    card: `The path integral sums over all configurations. Nobody can list them, but you can sample them with the right probabilities, and Metropolis does exactly that. Wilson's lattice turned quantum field theory into statistical mechanics you can run on a laptop.`,
+    goal: `Goal: let the running average of ⟨cos θ<sub>P</sub>⟩ settle, then record it within 2% of the exact value at three different couplings β, at least 0.8 apart.`,
+    deeper: `<p>Kenneth Wilson's 1974 paper replaced continuous spacetime by a grid with spacing a, put the gauge field on links and the action on plaquettes, and observed that the resulting Euclidean path integral is an ordinary, if enormous, statistical-mechanics sum. The Metropolis algorithm (Metropolis, Rosenbluth, Rosenbluth, Teller and Teller, 1953) samples that sum: propose a local change, accept it with probability min(1, e<sup>−ΔS</sup>), repeat. Averages over the samples converge to expectation values.</p>
+<p>In two dimensions the plaquette angles of U(1) theory become independent variables after a change of coordinates, so the one-plaquette integral gives ⟨cos θ<sub>P</sub>⟩ = I₁(β)/I₀(β) exactly, with I<sub>n</sub> the modified Bessel functions. That is the curve your measurements are compared against. Large β is weak coupling: the weight e<sup>−β(1 − cos θ)</sup> pins plaquettes near zero curvature and the lattice begins to look like a smooth continuum field. The continuum limit means a → 0 with couplings tuned so that physical masses stay fixed; in an asymptotically free theory that is the limit β → ∞.</p>
+<p>The same logic, with SU(3) matrices on links and quarks added, is lattice QCD. The Budapest–Marseille–Wuppertal collaboration computed the masses of the light hadrons from first principles to a few percent (Science, 2008). Every such computation assumes that the continuum limit exists and defines a quantum field theory obeying the axioms. Proving that for four-dimensional Yang–Mills theory is the "existence" half of the Clay Millennium problem.</p>`,
+    questions: [
+      { q: 'Large β means', opts: ['strong coupling and disordered plaquettes', 'weak coupling, plaquettes near zero, closer to the continuum', 'high temperature'], a: 1, why: 'β multiplies the action, so large β makes curvature expensive. Plaquettes freeze near zero and ⟨cos θ_P⟩ → 1.' },
+      { q: 'The Metropolis rule accepts a change that raises the action', opts: ['never', 'always', 'with probability e^−ΔS'], a: 2, why: 'Accepting uphill moves with probability e^−ΔS is what makes the samples follow the Boltzmann weight instead of sliding to the minimum.' },
+      { q: '⟨cos θ_P⟩ approaches 1 as β → ∞ because', opts: ['the weight concentrates on flat, zero-curvature configurations', 'the lattice gets smaller', 'the number of plaquettes grows'], a: 0, why: 'At large β only configurations with θ_P ≈ 0 carry weight, and cos 0 = 1. The exact curve I₁(β)/I₀(β) → 1 says the same thing.' }
+    ]
+  },
+  {
+    id: 'loops', title: 'Loop the loop', topic: 'Wilson loops and confinement',
+    card: `Drag a rectangle on the lattice to measure a Wilson loop. It tells you the energy of two static charges held apart by that loop. If −ln W grows with the area of the loop, the energy grows with distance and the charges can never be pulled apart. That is confinement.`,
+    goal: `Goal: measure at least three different loop areas and fit the string tension σ to within 10% of the exact value.`,
+    deeper: `<p>Wilson's confinement criterion: let W(C) be the expectation of the phase (or trace) accumulated around a closed loop C. For a rectangle of width R and time extent T, −ln W ≈ T·V(R) for large T, where V(R) is the energy of two static opposite charges held a distance R apart. If W obeys an area law, −ln W ≈ σ·R·T, then V(R) = σR grows linearly without bound: the charges are confined, and σ is the string tension. If W obeys a perimeter law, −ln W ≈ c·(R + T), the energy saturates and the charges can be separated: deconfinement.</p>
+<p>In two-dimensional U(1) theory the plaquettes are independent, so the loop expectation factorizes into one factor of I₁(β)/I₀(β) per enclosed plaquette, and the area law is exact for every β. Four dimensions is richer. Compact U(1) lattice theory confines at strong coupling but has a Coulomb phase at weak coupling (Guth 1980; Fröhlich and Spencer 1982), which is why free photons exist in the continuum limit. For SU(3), lattice computations show an area law at every coupling studied, with a string tension of roughly (440 MeV)² in physical units. Confinement in four-dimensional non-abelian gauge theory is established numerically but has never been proven.</p>`,
+    questions: [
+      { q: 'An area law for Wilson loops means the energy between two static charges grows', opts: ['linearly with their separation', 'like 1/r', 'not at all'], a: 0, why: '−ln W ≈ σRT = T·V(R) gives V(R) = σR: a string with constant tension σ connects the charges.' },
+      { q: 'In 2D U(1) lattice gauge theory, −ln W equals', opts: ['σ times the area, exactly', 'σ times the perimeter', 'a constant'], a: 0, why: 'Each enclosed plaquette contributes an independent factor I₁(β)/I₀(β), so −ln W = Area × (−ln(I₁/I₀)).' },
+      { q: 'A perimeter law indicates', opts: ['confinement', 'deconfinement: the charges can be separated at finite energy', 'a mass gap'], a: 1, why: 'If −ln W grows only with the perimeter, V(R) tends to a constant and the charges come apart.' }
+    ]
+  },
+  {
+    id: 'running', title: 'Zoom the coupling', topic: 'Renormalization and asymptotic freedom',
+    card: `Couplings depend on the energy at which you look. Predict for each theory: zoom in to higher energy, does the coupling shrink or grow? For the strong force it shrinks. That asymptotic freedom is the reason a continuum limit of Yang–Mills is expected to exist at all.`,
+    goal: `Goal: predict the direction for all three theories, then scrub the energy slider to read off the one-loop couplings.`,
+    deeper: `<p>Coupling constants are not constant. When a measurement probes a shorter distance, the quantum fluctuations it averages over change, and the effective coupling changes with the energy scale μ. The rate is the beta function. At one loop in SU(3) gauge theory with n<sub>f</sub> flavors of quarks, μ dα<sub>s</sub>/dμ = −(b₀/2π) α<sub>s</sub>² with b₀ = 11 − 2n<sub>f</sub>/3, so α<sub>s</sub>(μ) = α<sub>s</sub>(μ₀) / [1 + (b₀/2π) α<sub>s</sub>(μ₀) ln(μ/μ₀)]. For n<sub>f</sub> ≤ 16 the coefficient is positive and the coupling shrinks at high energy: asymptotic freedom, found by Gross and Wilczek and by Politzer in 1973 (Nobel Prize, 2004). David Gross, who leads the group examining OpenAI's physics claim, is that Gross.</p>
+<p>In QED the sign is reversed. The coupling grows with energy and, extrapolated at one loop, diverges at the Landau pole, far beyond the Planck scale but a sign that QED on its own may not define a consistent continuum theory. Scalar φ⁴ theory in four dimensions behaves the same way, and in 2021 Aizenman and Duminil-Copin proved that the lattice φ⁴ and Ising models in four dimensions are trivial: their continuum limits are free, non-interacting fields. That is why the Higgs sector by itself is not expected to be a continuum theory, and why a "completion" of the Standard Model, a theory that reduces to it at low energy yet exists at all scales, is a nontrivial mathematical target rather than a formality.</p>`,
+    questions: [
+      { q: 'Asymptotic freedom means the coupling', opts: ['grows at high energy', 'shrinks at high energy', 'does not depend on energy'], a: 1, why: 'With b₀ > 0 the one-loop coupling falls like 1/ln(μ). Quarks behave almost freely when probed at short distances.' },
+      { q: 'In SU(3) with n_f quark flavors, b₀ = 11 − 2n_f/3. Asymptotic freedom is lost when', opts: ['n_f ≥ 17', 'n_f ≥ 6', 'it is never lost'], a: 0, why: 'b₀ turns negative once 2n_f/3 > 11, that is n_f ≥ 17. Real QCD has 6 flavors.' },
+      { q: 'A Landau pole in QED suggests that', opts: ['QED by itself is probably not a complete continuum theory', 'electrons are massless', 'photons are confined'], a: 0, why: 'A coupling that diverges at finite energy signals that the theory needs a different completion at short distances, or is trivial as a continuum theory.' }
+    ]
+  },
+  {
+    id: 'sort', title: 'Sort the theories', topic: 'Constructive quantum field theory',
+    card: `"Existence" is a precise claim: a theory that satisfies a list of axioms. Sort nine theories into what has been built, what is known to collapse to a free theory, and what is still open. In four dimensions no interacting theory has ever been rigorously built.`,
+    goal: `Goal: place all nine cards. Mistakes bounce back with a one-line reason.`,
+    deeper: `<p>Arthur Wightman's axioms (1956) say what a relativistic quantum field theory is: a Hilbert space carrying a unitary representation of the Poincaré group with positive energy and a unique vacuum, and operator-valued distributions that commute at spacelike separation. Osterwalder and Schrader (1973, with a growth condition added in 1975) translated this into conditions on Euclidean correlation functions: Euclidean invariance, reflection positivity, permutation symmetry, the cluster property and a regularity bound. Satisfy those and a Wightman theory can be reconstructed.</p>
+<p>Constructive quantum field theory is the program of building theories that satisfy these axioms. Nelson, Glimm and Jaffe built interacting scalar theories in two dimensions in the late 1960s and early 1970s; Glimm and Jaffe, then Feldman and Osterwalder, built φ⁴ in three dimensions from 1973 on. Two-dimensional Yang–Mills is exactly solvable. In four dimensions the only interacting candidates with a chance are asymptotically free gauge theories, and the closest anyone came was Tadeusz Balaban's series of papers in the 1980s proving ultraviolet stability bounds for four-dimensional lattice Yang–Mills; the continuum limit was never completed. More recently Chandra, Chevyrev, Hairer and Shen (2022) made rigorous progress on three-dimensional Yang–Mills through stochastic quantization.</p>`,
+    questions: [
+      { q: 'Which interacting four-dimensional theory has been rigorously constructed?', opts: ['φ⁴', 'Yang–Mills', 'None'], a: 2, why: 'Interacting theories exist rigorously in two and three dimensions. In four, φ⁴ is trivial and Yang–Mills is open.' },
+      { q: 'Reflection positivity of the Euclidean theory gives, after reconstruction,', opts: ['a Hilbert space with positive norm', 'a Landau pole', 'confinement'], a: 0, why: 'Reflection positivity is the Euclidean shadow of positivity of the inner product. Without it there is no quantum theory to reconstruct.' },
+      { q: 'φ⁴ in four dimensions is trivial. That means', opts: ['its continuum limit is a free, non-interacting theory', 'it is easy to construct', 'it has no vacuum'], a: 0, why: 'Aizenman and Duminil-Copin (2021) proved the interaction vanishes in the scaling limit of the 4D lattice model.' }
+    ]
+  },
+  {
+    id: 'gap', title: 'Gap or no gap', topic: 'The mass gap and the Clay problem',
+    card: `A mass gap means the lightest excitation above the vacuum costs a definite energy Δ > 0. Read it off a correlation function: with a gap, ln C(r) falls along a straight line of slope −m. Without one, it bends. Decide, then estimate m.`,
+    goal: `Goal: four correlators, then the Clay statement and six questions.`,
+    deeper: `<p>In a theory with a mass gap Δ, the energy of the lightest state above the vacuum is Δ, and Euclidean correlation functions decay exponentially at large separation, C(r) ∼ e<sup>−Δr</sup> up to powers of r. In a theory with massless excitations the decay is a power law. The Clay Mathematics Institute problem, written by Arthur Jaffe and Edward Witten in 2000, asks for both halves: for any compact simple gauge group G, prove that a nontrivial quantum Yang–Mills theory exists on R⁴ and satisfies axioms at least as strong as Wightman's, and prove that it has a mass gap Δ > 0.</p>
+<p>The two halves answer different questions. Existence says the theory makes mathematical sense, which lattice QCD has assumed for fifty years of successful computation. The mass gap says why the strong force is short-ranged even though gluons are massless, and it is the mathematical shadow of confinement. Physicists have overwhelming numerical and experimental reasons to believe both. Neither has a proof.</p>`,
+    questions: [
+      { q: 'A mass gap Δ > 0 means', opts: ['the lightest excitation above the vacuum has energy at least Δ', 'the vacuum has energy Δ', 'every particle has mass exactly Δ'], a: 0, why: 'The gap is the distance in energy between the vacuum and the next state in the spectrum.' },
+      { q: 'A gapped two-point function decays', opts: ['exponentially', 'as a power law', 'not at all'], a: 0, why: 'C(r) ∼ e^−mr: on a semi-log plot it is a straight line with slope −m.' },
+      { q: 'The Clay Millennium problem on Yang–Mills asks for', opts: ['existence only', 'a mass gap only', 'both existence and a mass gap'], a: 2, why: 'Jaffe and Witten: prove the theory exists and satisfies Wightman-strength axioms, and prove Δ > 0.' },
+      { q: 'Which half does the October 2026 OpenAI claim address?', opts: ['existence', 'the mass gap', 'both'], a: 0, why: 'The announced manuscripts claim a rigorous construction of 4D Yang–Mills and QCD. No mass gap is claimed.' },
+      { q: 'Why is a continuum limit of 4D Yang–Mills expected to exist at all?', opts: ['asymptotic freedom makes the theory weakly coupled at short distances', 'because the lattice is finite', 'because photons exist'], a: 0, why: 'The ultraviolet is where a continuum limit can fail. Asymptotic freedom makes it the tame region of Yang–Mills.' },
+      { q: 'A gauge-invariant observable is', opts: ['a single link variable', 'the trace of a Wilson loop', 'the gauge parameter α'], a: 1, why: 'Closed loops are unchanged by gauge transformations at every site, so their traces are measurable.' }
+    ]
+  }
+];
+
+const RECAP = [
+  'A field is a number at every point of space; a configuration is scored by an action; after the Wick rotation, quantum theory weighs configurations by e^−S like a Boltzmann factor.',
+  'Gauge symmetry is a redundancy of description: links can change, plaquettes cannot, and only gauge-invariant quantities are observable.',
+  'Wilson’s lattice turns the path integral into statistical mechanics; Metropolis sampling computes it, and in 2D U(1) you reproduced the exact value ⟨cos θ_P⟩ = I₁(β)/I₀(β).',
+  'Wilson loops measure the energy between static charges. An area law means confinement, with string tension σ; in 2D U(1) the area law is exact.',
+  'Couplings run with energy. Asymptotic freedom (b₀ > 0) makes Yang–Mills weakly coupled at short distances, the reason a continuum limit should exist; QED and φ⁴ run the other way and φ⁴ in 4D is provably trivial.',
+  '“Existence” of a quantum field theory means satisfying the Wightman or Osterwalder–Schrader axioms. It has been achieved in two and three dimensions, never for an interacting theory in four.',
+  'The Clay problem has two halves, existence and a mass gap Δ > 0, and they answer different questions.'
+];
+
+const FRONTIER = `
+<p>On October 26, 2026, OpenAI announced that an internal model had produced manuscripts claiming a rigorous construction of four-dimensional Yang–Mills theory and of QCD, Yang–Mills with fermions, together with "completions of the Standard Model". The company's reported timeline: a Yang–Mills draft on September 9, a QCD draft on September 18, and a Lean formalization of Yang–Mills existence finished on October 16, 2026.</p>
+<p>The claim is about existence. It does not claim a mass gap. Even if every line holds, the second half of the Clay problem stays open.</p>
+<p>Unlike the two mathematics results in the same announcement, nothing from the physics work is public. A group led by David Gross, with Michael Douglas, Arthur Jaffe, Igor Klebanov and Nikita Nekrasov, is examining it and controls when, and whether, anything is released. As of this writing it is an unverified claim with no public artifacts.</p>
+<p>What a Lean check would establish, if the artifacts appear: that a formal statement follows from the definitions and axioms in the file, as checked by Lean's kernel. It would not by itself establish that those definitions match what physicists mean by a quantum Yang–Mills theory satisfying the Wightman axioms. That matching is the reviewers' job, and it is the hard part.</p>`;
+
+const GLOSSARY = [
+  ['Field', 'A quantity defined at every point of space (or spacetime). A scalar field assigns a number; a gauge field assigns a connection, represented on the lattice by a group element on each link.'],
+  ['Action', 'A single number scoring an entire field configuration. Classical physics picks the configuration that makes it stationary; quantum physics weighs all configurations by a function of it.'],
+  ['Lagrangian', 'The density whose integral over spacetime is the action. For a scalar field: a kinetic term quadratic in derivatives minus a potential.'],
+  ['Path integral', 'Feynman’s formulation: the amplitude is a sum over all configurations weighted by e^{iS/ħ}. After Wick rotation it becomes a sum weighted by e^{−S_E}, a statistical-mechanics partition function.'],
+  ['Euclidean theory and Wick rotation', 'Replacing time t by −iτ turns Minkowski spacetime into Euclidean space and oscillating phases into decaying weights. Osterwalder–Schrader reconstruction goes back the other way.'],
+  ['Gauge transformation', 'A change of the local phase (or frame) at each site. Links transform as θ_μ(x) → θ_μ(x) + α(x) − α(x+μ); plaquettes and Wilson loops are unchanged.'],
+  ['Link variable', 'The group element living on the edge between two neighboring lattice sites, here a phase e^{iθ}. It is the lattice form of the parallel transporter along that edge.'],
+  ['Plaquette', 'The smallest closed loop on the lattice, one elementary square. Its angle θ_P = θ_μ(x) + θ_ν(x+μ) − θ_μ(x+ν) − θ_ν(x) is the lattice curvature, approximating a²F_μν.'],
+  ['Wilson action', 'S = β Σ_P (1 − cos θ_P) for U(1), or β Σ_P (1 − Re tr U_P / N) for SU(N). It reduces to the Yang–Mills action ¼∫F_μν F^μν as the spacing goes to zero.'],
+  ['Metropolis algorithm', 'Markov-chain sampling: propose a local change, accept with probability min(1, e^{−ΔS}). The chain’s stationary distribution is the Boltzmann weight e^{−S}.'],
+  ['Continuum limit', 'Sending the lattice spacing a → 0 while tuning the couplings so that physical quantities stay fixed. Whether this limit exists and defines a quantum field theory is the content of “existence”.'],
+  ['Wilson loop', 'The expectation of the phase (trace) accumulated by transporting a charge around a closed curve. It measures the potential energy between static charges.'],
+  ['String tension', 'The coefficient σ in an area law −ln W ≈ σ × Area; equivalently the slope of a linearly rising potential V(r) = σr between confined charges.'],
+  ['Confinement', 'The property that colored charges cannot be isolated: the energy needed to separate them grows without bound. Signalled by an area law for Wilson loops.'],
+  ['Beta function', 'The rate at which a coupling changes with the energy scale, β(g) = μ dg/dμ. Its sign at weak coupling decides whether the theory is asymptotically free.'],
+  ['Asymptotic freedom', 'A negative beta function: the coupling shrinks at high energy. True for SU(3) with at most 16 quark flavors. Discovered by Gross, Wilczek and Politzer in 1973.'],
+  ['Landau pole', 'The energy at which a coupling with a positive beta function diverges when extrapolated. In QED it lies far beyond the Planck scale.'],
+  ['Triviality', 'A theory whose continuum limit has no interactions left. Proved for 4D φ⁴ and Ising by Aizenman and Duminil-Copin (2021).'],
+  ['Osterwalder–Schrader axioms', 'Conditions on Euclidean correlation functions (Euclidean invariance, reflection positivity, symmetry, clustering, regularity) that guarantee a relativistic quantum field theory can be reconstructed.'],
+  ['Wightman axioms', 'The 1956 axioms defining a relativistic quantum field theory: Hilbert space, Poincaré covariance with positive energy, a unique vacuum, and fields that commute at spacelike separation.'],
+  ['Mass gap', 'A positive lower bound Δ on the energy of any state above the vacuum. It makes correlations decay exponentially and forces are short-ranged. The second half of the Clay Yang–Mills problem.']
+];
+
+const SOURCES = [
+  'K. G. Wilson, “Confinement of quarks”, Physical Review D 10, 2445 (1974).',
+  'D. J. Gross and F. Wilczek, Physical Review Letters 30, 1343 (1973); H. D. Politzer, Physical Review Letters 30, 1346 (1973).',
+  'A. Jaffe and E. Witten, “Quantum Yang–Mills Theory”, Clay Mathematics Institute Millennium Prize problem description (2000).',
+  'J. Glimm and A. Jaffe, Quantum Physics: A Functional Integral Point of View, 2nd ed., Springer (1987).',
+  'K. Osterwalder and R. Schrader, “Axioms for Euclidean Green’s functions” I and II, Communications in Mathematical Physics 31 (1973) and 42 (1975).',
+  'M. Aizenman and H. Duminil-Copin, “Marginal triviality of the scaling limits of critical 4D Ising and φ⁴ models”, Annals of Mathematics 194 (2021).',
+  'A. Chandra, I. Chevyrev, M. Hairer and H. Shen, “Stochastic quantisation of Yang–Mills–Higgs in 3D”, arXiv (2022).',
+  'S. Dürr et al. (Budapest–Marseille–Wuppertal collaboration), “Ab initio determination of light hadron masses”, Science 322, 1224 (2008).',
+  'N. Metropolis, A. W. Rosenbluth, M. N. Rosenbluth, A. H. Teller and E. Teller, Journal of Chemical Physics 21, 1087 (1953).',
+  'M. Creutz, Quarks, Gluons and Lattices, Cambridge University Press (1983).',
+  'OpenAI, “Working with academic communities to build scientific understanding” (October 26, 2026), as reported by secondary coverage; the physics manuscripts themselves are not public.'
+];
+/* ---------- physics ---------- */
+const Bessel = {
+  I0(x) { let s = 1, t = 1; const q = x * x / 4; for (let k = 1; k < 90; k++) { t *= q / (k * k); s += t; if (t < 1e-17 * s) break; } return s; },
+  I1(x) { let s = x / 2, t = x / 2; const q = x * x / 4; for (let k = 1; k < 90; k++) { t *= q / (k * (k + 1)); s += t; if (Math.abs(t) < 1e-17 * Math.abs(s)) break; } return s; },
+  ratio(x) { return x <= 0 ? 0 : Bessel.I1(x) / Bessel.I0(x); }
+};
+
+/* periodic 2D U(1) lattice: th[(mu*L + y)*L + x], mu=0 link (x,y)->(x+1,y), mu=1 link (x,y)->(x,y+1) */
+class Lattice {
+  constructor(L, beta) { this.L = L; this.beta = beta; this.th = new Float64Array(2 * L * L); this.delta = 1.2; this.acc = 0; this.sweeps = 0; this.hot(); }
+  hot() { for (let i = 0; i < this.th.length; i++) this.th[i] = Math.random() * TAU; this.sweeps = 0; }
+  cold() { this.th.fill(0); this.sweeps = 0; }
+  idx(mu, x, y) { const L = this.L; x = ((x % L) + L) % L; y = ((y % L) + L) % L; return (mu * L + y) * L + x; }
+  get(mu, x, y) { return this.th[this.idx(mu, x, y)]; }
+  plaq(x, y) { return this.get(0, x, y) + this.get(1, x + 1, y) - this.get(0, x, y + 1) - this.get(1, x, y); }
+  avgCos() { let s = 0; const L = this.L; for (let y = 0; y < L; y++) for (let x = 0; x < L; x++) s += Math.cos(this.plaq(x, y)); return s / (L * L); }
+  sweep() {
+    const L = this.L, b = this.beta, d = this.delta; let acc = 0;
+    for (let y = 0; y < L; y++) for (let x = 0; x < L; x++) for (let mu = 0; mu < 2; mu++) {
+      const i = this.idx(mu, x, y); const old = this.th[i]; const dth = (Math.random() * 2 - 1) * d;
+      let dS;
+      if (mu === 0) { const p1 = this.plaq(x, y), p2 = this.plaq(x, y - 1); dS = b * ((Math.cos(p1) - Math.cos(p1 + dth)) + (Math.cos(p2) - Math.cos(p2 - dth))); }
+      else { const p1 = this.plaq(x, y), p2 = this.plaq(x - 1, y); dS = b * ((Math.cos(p1) - Math.cos(p1 - dth)) + (Math.cos(p2) - Math.cos(p2 + dth))); }
+      if (dS <= 0 || Math.random() < Math.exp(-dS)) { this.th[i] = wrapAngle(old + dth); acc++; }
+    }
+    this.sweeps++; const rate = acc / (2 * L * L); this.acc = rate;
+    if (rate > 0.6) this.delta = Math.min(Math.PI, this.delta * 1.08); else if (rate < 0.4) this.delta = Math.max(0.02, this.delta * 0.92);
+    return rate;
+  }
+  gauge(x, y, a) {
+    const i0 = this.idx(0, x, y), i1 = this.idx(1, x, y), i2 = this.idx(0, x - 1, y), i3 = this.idx(1, x, y - 1);
+    this.th[i0] = wrapAngle(this.th[i0] + a); this.th[i1] = wrapAngle(this.th[i1] + a);
+    this.th[i2] = wrapAngle(this.th[i2] - a); this.th[i3] = wrapAngle(this.th[i3] - a);
+  }
+  loopSum(x, y, R, T) {
+    let s = 0;
+    for (let i = 0; i < R; i++) s += this.get(0, x + i, y);
+    for (let j = 0; j < T; j++) s += this.get(1, x + R, y + j);
+    for (let i = 0; i < R; i++) s -= this.get(0, x + i, y + T);
+    for (let j = 0; j < T; j++) s -= this.get(1, x, y + j);
+    return s;
+  }
+  wilson(R, T) { let s = 0; const L = this.L; for (let y = 0; y < L; y++) for (let x = 0; x < L; x++) s += Math.cos(this.loopSum(x, y, R, T)); return s / (L * L); }
+}
+
+/* open-boundary N×N lattice for the gauge puzzles */
+class OpenLattice {
+  constructor(N) { this.N = N; this.h = new Float64Array(N * (N - 1)); this.v = new Float64Array(N * (N - 1)); }
+  hi(x, y) { return y * (this.N - 1) + x; }
+  vi(x, y) { return y * this.N + x; }
+  randomize() { for (let i = 0; i < this.h.length; i++) { this.h[i] = Math.random() * TAU; this.v[i] = Math.random() * TAU; } return this; }
+  plaq(x, y) { return this.h[this.hi(x, y)] + this.v[this.vi(x + 1, y)] - this.h[this.hi(x, y + 1)] - this.v[this.vi(x, y)]; }
+  gauge(x, y, a) {
+    const N = this.N;
+    if (x < N - 1) { const i = this.hi(x, y); this.h[i] = wrapAngle(this.h[i] + a); }
+    if (y < N - 1) { const i = this.vi(x, y); this.v[i] = wrapAngle(this.v[i] + a); }
+    if (x > 0) { const i = this.hi(x - 1, y); this.h[i] = wrapAngle(this.h[i] - a); }
+    if (y > 0) { const i = this.vi(x, y - 1); this.v[i] = wrapAngle(this.v[i] - a); }
+  }
+  clone() { const o = new OpenLattice(this.N); o.h.set(this.h); o.v.set(this.v); return o; }
+  energy() { let s = 0; for (let y = 0; y < this.N - 1; y++) for (let x = 0; x < this.N - 1; x++) s += 1 - Math.cos(this.plaq(x, y)); return s; }
+}
+
+/* ---------- drawing helpers ---------- */
+function energyColor(T, e) { // e in [0,1]
+  return withAlpha(T.energy, 0.08 + 0.8 * clamp(e, 0, 1));
+}
+function arrow(ctx, x, y, ang, len, color, width = 1.6) {
+  const dx = Math.cos(ang) * len / 2, dy = -Math.sin(ang) * len / 2;
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x - dx, y - dy); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+  const hx = x + dx, hy = y + dy, h = Math.max(3, len * 0.32);
+  ctx.beginPath(); ctx.moveTo(hx, hy);
+  ctx.lineTo(hx - Math.cos(ang - 0.5) * h, hy + Math.sin(ang - 0.5) * h);
+  ctx.lineTo(hx - Math.cos(ang + 0.5) * h, hy + Math.sin(ang + 0.5) * h); ctx.closePath(); ctx.fill();
+}
+/* draw an OpenLattice with arrows; opts: {ox, oy, cell, T, sel:{x,y}, mismatch:(kind,x,y)=>|d| or null, plaqDots:(x,y)=>bool|null, label} */
+function drawOpen(ctx, lat, o) {
+  const N = lat.N, c = o.cell, T = o.T;
+  for (let y = 0; y < N - 1; y++) for (let x = 0; x < N - 1; x++) {
+    const e = (1 - Math.cos(lat.plaq(x, y))) / 2;
+    ctx.fillStyle = energyColor(T, e); ctx.fillRect(o.ox + x * c + 1, o.oy + (N - 2 - y) * c + 1, c - 2, c - 2);
+    if (o.plaqDots) { const ok = o.plaqDots(x, y); ctx.fillStyle = ok ? T.good : T.bad; ctx.beginPath(); ctx.arc(o.ox + x * c + c / 2, o.oy + (N - 2 - y) * c + c / 2, Math.max(3, c * 0.09), 0, TAU); ctx.fill(); }
+  }
+  ctx.strokeStyle = withAlpha(T.fg, 0.18); ctx.lineWidth = 1;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const px = o.ox + x * c, py = o.oy + (N - 1 - y) * c;
+    if (x < N - 1) { ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + c, py); ctx.stroke(); }
+    if (y < N - 1) { ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py - c); ctx.stroke(); }
+  }
+  const alen = Math.max(8, c * 0.42);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const px = o.ox + x * c, py = o.oy + (N - 1 - y) * c;
+    if (x < N - 1) { const d = o.mismatch ? o.mismatch('h', x, y) : 0; const col = d > 1e-3 ? withAlpha(T.bad, 0.45 + 0.55 * d / Math.PI) : T.link; arrow(ctx, px + c / 2, py, lat.h[lat.hi(x, y)], alen, col, d > 1e-3 ? 2.4 : 1.6); }
+    if (y < N - 1) { const d = o.mismatch ? o.mismatch('v', x, y) : 0; const col = d > 1e-3 ? withAlpha(T.bad, 0.45 + 0.55 * d / Math.PI) : T.link; arrow(ctx, px, py - c / 2, lat.v[lat.vi(x, y)], alen, col, d > 1e-3 ? 2.4 : 1.6); }
+  }
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const px = o.ox + x * c, py = o.oy + (N - 1 - y) * c;
+    const sel = o.sel && o.sel.x === x && o.sel.y === y;
+    ctx.fillStyle = sel ? T.accent : T.fg; ctx.beginPath(); ctx.arc(px, py, sel ? 6 : 3, 0, TAU); ctx.fill();
+    if (sel) { ctx.strokeStyle = T.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py, 12, 0, TAU); ctx.stroke(); }
+  }
+  if (o.label) { ctx.fillStyle = T.muted; ctx.font = `700 12px ${T.body}`; ctx.textAlign = 'left'; ctx.fillText(o.label, o.ox, o.oy - 8); }
+}
+/* heat map of a periodic lattice's plaquettes */
+function drawHeat(ctx, lat, o) {
+  const L = lat.L, c = o.cell, T = o.T;
+  ctx.fillStyle = withAlpha(T.fg, 0.04); ctx.fillRect(o.ox, o.oy, L * c, L * c);
+  for (let y = 0; y < L; y++) for (let x = 0; x < L; x++) {
+    const e = (1 - Math.cos(lat.plaq(x, y))) / 2;
+    ctx.fillStyle = energyColor(T, e); ctx.fillRect(o.ox + x * c + 0.5, o.oy + (L - 1 - y) * c + 0.5, c - 1, c - 1);
+  }
+  ctx.strokeStyle = withAlpha(T.fg, 0.35); ctx.lineWidth = 1; ctx.strokeRect(o.ox - 0.5, o.oy - 0.5, L * c + 1, L * c + 1);
+}
+function axes(ctx, T, box, xl, yl) {
+  ctx.strokeStyle = withAlpha(T.fg, 0.5); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(box.x, box.y); ctx.lineTo(box.x, box.y + box.h); ctx.lineTo(box.x + box.w, box.y + box.h); ctx.stroke();
+  ctx.fillStyle = T.muted; ctx.font = `11px ${T.body}`; ctx.textAlign = 'center';
+  if (xl) ctx.fillText(xl, box.x + box.w / 2, box.y + box.h + 26);
+  if (yl) { ctx.save(); ctx.translate(box.x - 34, box.y + box.h / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yl, 0, 0); ctx.restore(); }
+}
+
+/* ---------- level 1: paint a field ---------- */
+function levelField(api) {
+  const N = 16; const phi = new Float32Array(N * N);
+  let lambda = 1.0, brush = 1.0, goal1 = false, goal2 = false, usedFill = false, painting = false, lastCell = -1, done = false;
+  const randomize = () => { for (let i = 0; i < phi.length; i++) phi[i] = rand(-1, 1); };
+  randomize();
+  const canvas = el('canvas', { 'aria-label': 'Scalar field grid. Drag to paint values.', tabindex: 0 });
+  api.board.append(canvas);
+  const brushOut = el('span', { class: 'mono' }, '+1.0'); const lamOut = el('span', { class: 'mono' }, '1.0');
+  const brushIn = el('input', { type: 'range', min: -1, max: 1, step: 0.1, value: 1, id: 'f-brush' });
+  const lamIn = el('input', { type: 'range', min: 0.2, max: 4, step: 0.1, value: 1, id: 'f-lambda' });
+  const mk = (t, fn, cls = 'btn small') => el('button', { class: cls, onclick: () => { api.sfx('click'); fn(); } }, t);
+  const controls = el('div', { class: 'controls' },
+    el('div', { class: 'row' }, el('label', { for: 'f-brush' }, 'Brush value ', brushIn, brushOut), el('label', { for: 'f-lambda' }, 'λ ', lamIn, lamOut)),
+    el('div', { class: 'row' }, mk('Randomize', () => { randomize(); update(); }), mk('Fill +1', () => { phi.fill(1); usedFill = true; update(); }), mk('Fill −1', () => { phi.fill(-1); usedFill = true; update(); }), mk('Smooth once', () => { smooth(); update(); }), mk('Split: left +1, right −1', () => { for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) phi[y * N + x] = x < N / 2 ? 1 : -1; usedFill = true; update(); }))
+  );
+  api.board.append(controls);
+  const rS = el('div', { class: 'v' }, '0'), rW = el('div', { class: 'v' }, '1'), rPlus = el('div', { class: 'v' }, '0%'), rMinus = el('div', { class: 'v' }, '0%');
+  const g1 = el('div', { class: 'status' }, 'Goal 1: action below 1'); const g2 = el('div', { class: 'status' }, 'Goal 2: a wall between +1 and −1 regions (action between 10 and 200)');
+  api.side.append(el('div', { class: 'readouts' },
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Action S'), rS),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Weight e^−S'), rW),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Cells near +1'), rPlus),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Cells near −1'), rMinus)), g1, g2);
+  brushIn.oninput = () => { brush = +brushIn.value; brushOut.textContent = (brush >= 0 ? '+' : '') + brush.toFixed(1); };
+  lamIn.oninput = () => { lambda = +lamIn.value; lamOut.textContent = lambda.toFixed(1); update(); };
+  function action() {
+    let s = 0;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const p = phi[y * N + x];
+      if (x < N - 1) { const d = phi[y * N + x + 1] - p; s += 0.5 * d * d; }
+      if (y < N - 1) { const d = phi[(y + 1) * N + x] - p; s += 0.5 * d * d; }
+      const q = p * p - 1; s += lambda / 4 * q * q;
+    }
+    return s;
+  }
+  function smooth() {
+    const out = new Float32Array(N * N);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      let sum = 0, n = 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const xx = x + dx, yy = y + dy; if (xx >= 0 && xx < N && yy >= 0 && yy < N) { sum += phi[yy * N + xx]; n++; } }
+      out[y * N + x] = 0.5 * phi[y * N + x] + 0.5 * sum / n;
+    }
+    phi.set(out);
+  }
+  let geo = { ctx: null, w: 0, h: 0, cell: 0, ox: 0, oy: 0 };
+  function resize() { const f = fitCanvas(canvas, 1.25, 520); geo.ctx = f.ctx; geo.w = f.w; geo.h = f.h; geo.cell = Math.floor(Math.min(f.w - 20, f.h - 20) / N); geo.ox = Math.floor((f.w - geo.cell * N) / 2); geo.oy = Math.floor((f.h - geo.cell * N) / 2); draw(); }
+  function draw() {
+    const { ctx, w, h, cell, ox, oy } = geo; if (!ctx) return; const T = theme();
+    ctx.clearRect(0, 0, w, h);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const p = clamp(phi[y * N + x], -1, 1);
+      ctx.fillStyle = p >= 0 ? withAlpha(T.accent, 0.12 + 0.85 * p) : withAlpha(T.link, 0.12 + 0.85 * (-p));
+      ctx.fillRect(ox + x * cell, oy + (N - 1 - y) * cell, cell, cell);
+    }
+    ctx.strokeStyle = withAlpha(T.fg, 0.2); ctx.lineWidth = 1;
+    for (let i = 0; i <= N; i++) { ctx.beginPath(); ctx.moveTo(ox + i * cell + 0.5, oy); ctx.lineTo(ox + i * cell + 0.5, oy + N * cell); ctx.stroke(); ctx.beginPath(); ctx.moveTo(ox, oy + i * cell + 0.5); ctx.lineTo(ox + N * cell, oy + i * cell + 0.5); ctx.stroke(); }
+    ctx.fillStyle = T.muted; ctx.font = `11px ${T.body}`; ctx.textAlign = 'left';
+    ctx.fillText('coral = +1, blue = −1, pale = 0', ox, oy + N * cell + 14);
+  }
+  function update() {
+    const S = action(); let plus = 0, minus = 0;
+    for (let i = 0; i < phi.length; i++) { if (phi[i] > 0.5) plus++; else if (phi[i] < -0.5) minus++; }
+    rS.textContent = S.toFixed(2);
+    rW.textContent = S < 650 ? Math.exp(-S).toExponential(2) : ('10^−' + Math.round(S * 0.4343));
+    rPlus.textContent = Math.round(100 * plus / phi.length) + '%'; rMinus.textContent = Math.round(100 * minus / phi.length) + '%';
+    if (!goal1 && S < 1) { goal1 = true; g1.textContent = 'Goal 1 done: the field settled into one valley.'; g1.className = 'status good'; api.sfx('star'); api.burstAt(g1, theme().good, 18); }
+    if (!goal2 && plus / phi.length >= 0.2 && minus / phi.length >= 0.2 && S >= 10 && S <= 200) { goal2 = true; g2.textContent = `Goal 2 done: your wall costs S ≈ ${S.toFixed(0)} while a uniform field costs 0.`; g2.className = 'status good'; api.sfx('star'); api.burstAt(g2, theme().good, 18); }
+    api.progress((goal1 + goal2) / 2);
+    api.status(S < 1 ? 'A uniform field in a valley: this is a vacuum.' : S < 10 ? 'Almost there. Smooth out the last ripples.' : plus && minus ? 'Two domains. The boundary between them is what costs action.' : 'Paint, fill, or smooth. Watch S and the weight.');
+    draw();
+    if (goal1 && goal2 && !done) { done = true; setTimeout(() => api.complete(1 + (goal2 ? 1 : 0) + (usedFill ? 0 : 1)), 900); }
+  }
+  function paintAt(e) {
+    const p = canvasPos(canvas, e); const x = Math.floor((p.x - geo.ox) / geo.cell), yy = Math.floor((p.y - geo.oy) / geo.cell);
+    if (x < 0 || x >= N || yy < 0 || yy >= N) return; const y = N - 1 - yy; const i = y * N + x;
+    if (i === lastCell) return; lastCell = i; phi[i] = brush; api.sfx('tick'); update();
+  }
+  canvas.addEventListener('pointerdown', e => { painting = true; lastCell = -1; canvas.setPointerCapture(e.pointerId); paintAt(e); });
+  canvas.addEventListener('pointermove', e => { if (painting) paintAt(e); });
+  canvas.addEventListener('pointerup', () => { painting = false; }); canvas.addEventListener('pointercancel', () => { painting = false; });
+  let cur = { x: 0, y: 0 };
+  canvas.addEventListener('keydown', e => {
+    const k = e.key; if (k === 'ArrowLeft') cur.x = Math.max(0, cur.x - 1); else if (k === 'ArrowRight') cur.x = Math.min(N - 1, cur.x + 1); else if (k === 'ArrowUp') cur.y = Math.min(N - 1, cur.y + 1); else if (k === 'ArrowDown') cur.y = Math.max(0, cur.y - 1); else if (k === ' ' || k === 'Enter') { phi[cur.y * N + cur.x] = brush; update(); } else return; e.preventDefault();
+  });
+  resize(); update();
+  return { destroy() {}, resize };
+}
+
+/* ---------- level 2: spin the gauge ---------- */
+function levelGauge(api) {
+  let phase = 'sandbox', lat = new OpenLattice(8).randomize(), target = null, sel = null, drag = null, count = 0, round = 0, wrongPresses = 0, compare = false, finished = false;
+  const canvas = el('canvas', { 'aria-label': 'Lattice of link arrows and plaquettes. Click a site, then drag or use the rotate buttons.', tabindex: 0 });
+  api.board.append(canvas);
+  const badge = el('span', { class: 'badge' }, 'plaquette energy unchanged');
+  const rE = el('div', { class: 'v' }, '0'), rC = el('div', { class: 'v' }, '0 / 3'), rR = el('div', { class: 'v' }, 'sandbox');
+  const btnPlus = el('button', { class: 'btn small', onclick: () => rotateSel(Math.PI / 4) }, '+45°'), btnMinus = el('button', { class: 'btn small', onclick: () => rotateSel(-Math.PI / 4) }, '−45°');
+  const btnNot = el('button', { class: 'btn small', hidden: true, onclick: notEquivalent }, 'Not equivalent');
+  const btnCmp = el('button', { class: 'btn small', hidden: true, onclick: () => { compare = !compare; btnCmp.classList.toggle('on', compare); api.sfx('click'); draw(); } }, 'Compare plaquettes');
+  const btnNext = el('button', { class: 'btn primary small', hidden: true, onclick: startPuzzles }, 'Continue to the puzzles');
+  api.board.append(el('div', { class: 'controls' }, el('div', { class: 'row' }, el('span', { class: 'muted' }, 'Selected site:'), btnMinus, btnPlus, btnCmp, btnNot, btnNext), el('div', { class: 'row' }, badge)));
+  api.side.append(el('div', { class: 'readouts' },
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Σ (1 − cos θ_P)'), rE),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Gauge moves'), rC),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Stage'), rR)));
+  let geo = {};
+  function layout() {
+    const f = { w: geo.w, h: geo.h }; const N = lat.N;
+    if (phase === 'sandbox') { geo.cell = Math.floor(Math.min(f.w - 40, f.h - 50) / (N - 1)); geo.ox = Math.floor((f.w - geo.cell * (N - 1)) / 2); geo.oy = 30 + Math.floor((f.h - 40 - geo.cell * (N - 1)) / 2); geo.tx = null; }
+    else {
+      if (geo.stack) { geo.cell = Math.floor(Math.min(f.w - 40, (f.h - 80) / 2) / (N - 1)); geo.ox = Math.floor((f.w - geo.cell * (N - 1)) / 2); geo.oy = 30; geo.tx = geo.ox; geo.ty = geo.oy + geo.cell * (N - 1) + 50; }
+      else { geo.cell = Math.floor(Math.min((f.w - 80) / 2, f.h - 50) / (N - 1)); geo.ox = Math.floor((f.w / 2 - geo.cell * (N - 1)) / 2); geo.oy = 30 + Math.floor((f.h - 40 - geo.cell * (N - 1)) / 2); geo.tx = Math.floor(f.w / 2) + geo.ox; geo.ty = geo.oy; }
+    }
+  }
+  function resize() {
+    const pw = canvas.parentElement.clientWidth || 600; let aspect = 1.15;
+    if (phase !== 'sandbox') { geo.stack = pw < 560; aspect = geo.stack ? 0.6 : 1.9; }
+    const f = fitCanvas(canvas, aspect, 620); geo.ctx = f.ctx; geo.w = f.w; geo.h = f.h; layout(); draw();
+  }
+  function mismatch(kind, x, y) { if (!target) return 0; const a = kind === 'h' ? lat.h[lat.hi(x, y)] : lat.v[lat.vi(x, y)]; const b = kind === 'h' ? target.h[target.hi(x, y)] : target.v[target.vi(x, y)]; return Math.abs(angDiff(a, b)); }
+  function plaqEqual(x, y) { return Math.abs(angDiff(lat.plaq(x, y), target.plaq(x, y))) < 1e-3; }
+  function draw() {
+    const { ctx, w, h } = geo; if (!ctx) return; const T = theme(); ctx.clearRect(0, 0, w, h);
+    if (phase === 'sandbox') drawOpen(ctx, lat, { ox: geo.ox, oy: geo.oy, cell: geo.cell, T, sel, label: 'Sandbox: click a site, drag around it or use the buttons' });
+    else {
+      drawOpen(ctx, lat, { ox: geo.ox, oy: geo.oy, cell: geo.cell, T, sel, mismatch, plaqDots: compare ? plaqEqual : null, label: `Yours (round ${round} of 3)` });
+      drawOpen(ctx, target, { ox: geo.tx, oy: geo.ty, cell: geo.cell, T, plaqDots: compare ? plaqEqual : null, label: 'Target' });
+    }
+    rE.textContent = lat.energy().toFixed(3);
+  }
+  function siteAt(e) {
+    // nearest site to the pointer, as long as the pointer is inside the lattice (with a half-cell margin)
+    const p = canvasPos(canvas, e); const N = lat.N; const span = geo.cell * (N - 1);
+    if (p.x < geo.ox - geo.cell / 2 || p.x > geo.ox + span + geo.cell / 2 || p.y < geo.oy - geo.cell / 2 || p.y > geo.oy + span + geo.cell / 2) return null;
+    const x = clamp(Math.round((p.x - geo.ox) / geo.cell), 0, N - 1), yy = clamp(Math.round((p.y - geo.oy) / geo.cell), 0, N - 1);
+    return { x, y: N - 1 - yy, cx: geo.ox + x * geo.cell, cy: geo.oy + yy * geo.cell };
+  }
+  function applyGauge(x, y, a) { lat.gauge(x, y, a); draw(); }
+  function rotateSel(a) { if (!sel) { api.toast('Click a site first.'); return; } applyGauge(sel.x, sel.y, a); api.sfx('whoosh'); afterMove(a); }
+  function afterMove(total) {
+    if (phase === 'sandbox') {
+      if (Math.abs(total) > 0.3) { count++; rC.textContent = `${count} / 3`; badge.classList.remove('flash'); void badge.offsetWidth; badge.classList.add('flash'); api.progress(Math.min(1, count / 3) * 0.3); api.status('The arrows moved. The plaquette energy did not. That is gauge invariance.', 'good');
+        if (count >= 3) { btnNext.hidden = false; api.sfx('unlock'); } }
+    } else checkRound();
+  }
+  canvas.addEventListener('pointerdown', e => {
+    const s = siteAt(e); if (!s) return; sel = { x: s.x, y: s.y }; canvas.setPointerCapture(e.pointerId);
+    drag = { x: s.x, y: s.y, cx: s.cx, cy: s.cy, last: null, total: 0, applied: 0 }; api.sfx('click'); draw();
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!drag) return; const p = canvasPos(canvas, e); const dx = p.x - drag.cx, dy = -(p.y - drag.cy); if (dx * dx + dy * dy < 100) return;
+    const ang = Math.atan2(dy, dx); if (drag.last === null) { drag.last = ang; return; } const d = angDiff(ang, drag.last); drag.last = ang; drag.total += d;
+    if (phase === 'sandbox') { applyGauge(drag.x, drag.y, d); }
+    else { const snapped = Math.round(drag.total / (Math.PI / 4)) * (Math.PI / 4); const diff = snapped - drag.applied; if (Math.abs(diff) > 1e-9) { applyGauge(drag.x, drag.y, diff); drag.applied = snapped; api.sfx('tick'); } }
+  });
+  const endDrag = () => { if (!drag) return; const t = phase === 'sandbox' ? drag.total : drag.applied; if (Math.abs(t) > 1e-6) { api.sfx('whoosh'); afterMove(t); } drag = null; };
+  canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener('keydown', e => {
+    const N = lat.N; if (!sel) sel = { x: 0, y: 0 };
+    if (e.key === 'ArrowLeft') sel.x = Math.max(0, sel.x - 1); else if (e.key === 'ArrowRight') sel.x = Math.min(N - 1, sel.x + 1); else if (e.key === 'ArrowUp') sel.y = Math.min(N - 1, sel.y + 1); else if (e.key === 'ArrowDown') sel.y = Math.max(0, sel.y - 1);
+    else if (e.key === 'q' || e.key === '-') { rotateSel(-Math.PI / 4); return; } else if (e.key === 'e' || e.key === '=' || e.key === '+') { rotateSel(Math.PI / 4); return; } else return;
+    e.preventDefault(); draw();
+  });
+  function startPuzzles() { api.sfx('click'); phase = 'puzzle'; btnNext.hidden = true; btnCmp.hidden = false; btnNot.hidden = false; round = 0; nextRound(); }
+  function nextRound() {
+    round++; sel = null; compare = false; btnCmp.classList.remove('on');
+    lat = new OpenLattice(6).randomize(); target = lat.clone(); const N = 6;
+    const k = round === 1 ? 2 : 4; const sites = new Set(); while (sites.size < k) sites.add(Math.floor(Math.random() * N * N));
+    for (const s of sites) { const steps = pick([1, 2, 3, 4, -1, -2, -3]); target.gauge(s % N, Math.floor(s / N), steps * Math.PI / 4); }
+    geo.notEq = false;
+    if (round === 3) { const i = Math.floor(Math.random() * target.h.length); target.h[i] = wrapAngle(target.h[i] + Math.PI / 2); geo.notEq = true; }
+    rR.textContent = `puzzle ${round} / 3`; api.progress(0.3 + 0.7 * (round - 1) / 3);
+    api.status(round < 3 ? 'Match the target using only gauge moves. Red arrows are links that still differ.' : 'Match the target, or decide that no gauge transformation can do it.');
+    resize();
+  }
+  function allMatch() { for (let y = 0; y < lat.N; y++) for (let x = 0; x < lat.N; x++) { if (x < lat.N - 1 && mismatch('h', x, y) > 1e-3) return false; if (y < lat.N - 1 && mismatch('v', x, y) > 1e-3) return false; } return true; }
+  function checkRound() { if (allMatch()) { api.sfx('good'); api.burstAt(canvas, theme().good, 30); api.status('Matched. Every link agrees, and the plaquettes agreed all along.', 'good'); setTimeout(roundDone, 700); } }
+  function notEquivalent() {
+    if (phase !== 'puzzle') return;
+    if (geo.notEq) { api.sfx('good'); api.burstAt(btnNot, theme().good, 24); api.status('Correct. A plaquette differs, and no gauge move can change a plaquette.', 'good'); setTimeout(roundDone, 700); }
+    else { wrongPresses++; api.sfx('bad'); compare = true; btnCmp.classList.add('on'); draw(); api.status('Every plaquette matches, so a gauge transformation does exist. Keep going.', 'bad'); }
+  }
+  function roundDone() { if (round < 3) nextRound(); else if (!finished) { finished = true; api.progress(1); api.complete(Math.max(1, 3 - wrongPresses)); } }
+  resize(); api.status('Click a site, then drag around it. Watch the plaquette energy.');
+  return { destroy() {}, resize };
+}
+
+/* ---------- level 3: run the lattice ---------- */
+function levelMC(api) {
+  const L = 12; let lat = new Lattice(L, 1.0); let running = true, speed = 6, raf = 0, therm = 30, buf = [], series = [], records = [], frame = 0, done = false;
+  const canvas = el('canvas', { 'aria-label': 'Lattice heat map and plots of the average plaquette.' }); api.board.append(canvas);
+  const betaIn = el('input', { type: 'range', min: 0.2, max: 8, step: 0.1, value: 1, id: 'mc-beta' }), betaOut = el('span', { class: 'mono' }, '1.0');
+  const spIn = el('input', { type: 'range', min: 1, max: 20, step: 1, value: 6, id: 'mc-speed' }), spOut = el('span', { class: 'mono' }, '6');
+  const btnRun = el('button', { class: 'btn small on', onclick: () => { running = !running; btnRun.textContent = running ? 'Pause' : 'Run'; btnRun.classList.toggle('on', running); api.sfx('click'); } }, 'Pause');
+  const btnRec = el('button', { class: 'btn primary small', onclick: record }, 'Record measurement');
+  const btnHot = el('button', { class: 'btn small', onclick: () => { lat.hot(); reset(); api.sfx('click'); } }, 'Restart hot');
+  const btnCold = el('button', { class: 'btn small', onclick: () => { lat.cold(); reset(); api.sfx('click'); } }, 'Restart cold');
+  api.board.append(el('div', { class: 'controls' },
+    el('div', { class: 'row' }, el('label', { for: 'mc-beta' }, 'β ', betaIn, betaOut), el('label', { for: 'mc-speed' }, 'Sweeps per frame ', spIn, spOut)),
+    el('div', { class: 'row' }, btnRun, btnHot, btnCold, btnRec)));
+  const rInst = el('div', { class: 'v' }, '–'), rAvg = el('div', { class: 'v' }, '–'), rEx = el('div', { class: 'v' }, '–'), rErr = el('div', { class: 'v' }, '–'), rSw = el('div', { class: 'v' }, '0'), rAcc = el('div', { class: 'v' }, '–');
+  const recList = el('div', { class: 'status' }, 'Recorded: none yet');
+  api.side.append(el('div', { class: 'readouts' },
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, '⟨cos θ_P⟩ now'), rInst),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Running average'), rAvg),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Exact I₁(β)/I₀(β)'), rEx),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Error'), rErr),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Sweeps since β changed'), rSw),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Acceptance'), rAcc)), recList);
+  betaIn.oninput = () => { lat.beta = +betaIn.value; betaOut.textContent = lat.beta.toFixed(1); reset(); };
+  spIn.oninput = () => { speed = +spIn.value; spOut.textContent = speed; };
+  function reset() { buf = []; series = []; lat.sweeps = 0; }
+  function exact() { return Bessel.ratio(lat.beta); }
+  function avg() { if (!buf.length) return NaN; let s = 0; for (const v of buf) s += v; return s / buf.length; }
+  function within(a) { const ex = exact(); return Math.abs(a - ex) <= Math.max(0.02 * ex, 0.005); }
+  function record() {
+    api.sfx('click'); const a = avg();
+    if (!Number.isFinite(a) || buf.length < 60) { api.toast('Let the running average settle first (wait ~60 sweeps after thermalization).'); return; }
+    if (!within(a)) { api.toast(`Not within 2% yet: average ${a.toFixed(4)} vs exact ${exact().toFixed(4)}. Give it more sweeps.`); api.sfx('bad'); return; }
+    if (records.some(r => Math.abs(r.beta - lat.beta) < 0.8)) { api.toast('Choose a β at least 0.8 away from your other records.'); return; }
+    records.push({ beta: lat.beta, avg: a, exact: exact() }); api.sfx('star'); api.burstAt(btnRec, theme().warn, 26);
+    recList.textContent = 'Recorded: ' + records.map(r => `β=${r.beta.toFixed(1)} → ${r.avg.toFixed(3)}`).join(', ');
+    api.progress(records.length / 3); api.status(`Recorded β = ${lat.beta.toFixed(1)}. ${3 - records.length} to go.`, 'good');
+    if (records.length >= 3 && !done) { done = true; const merr = records.reduce((s, r) => s + Math.abs(r.avg - r.exact) / Math.max(r.exact, 0.05), 0) / 3; setTimeout(() => api.complete(merr < 0.01 ? 3 : 2), 800); }
+  }
+  let geo = {};
+  function resize() { const stack = (canvas.parentElement.clientWidth || 600) < 620; const f = fitCanvas(canvas, stack ? 0.75 : 2.05, 620); geo = { ctx: f.ctx, w: f.w, h: f.h, stack }; draw(); }
+  function step() {
+    if (running) { const t0 = performance.now(); for (let k = 0; k < speed && performance.now() - t0 < 8; k++) { lat.sweep(); const v = lat.avgCos(); if (lat.sweeps > therm) { buf.push(v); if (buf.length > 600) buf.shift(); } series.push(v); if (series.length > 400) series.shift(); } }
+    frame++;
+    if (frame % 3 === 0) { const a = avg(), ex = exact(); rInst.textContent = fmt(series[series.length - 1], 4); rAvg.textContent = fmt(a, 4); rEx.textContent = ex.toFixed(4); rErr.textContent = Number.isFinite(a) ? pct(Math.abs(a - ex) / Math.max(ex, 1e-9)) : '–'; rErr.style.color = Number.isFinite(a) && within(a) && buf.length >= 60 ? theme().good : ''; rSw.textContent = lat.sweeps; rAcc.textContent = pct(lat.acc); }
+    if (frame % 10 === 0 && Audio.active) { Audio.setBrightness(clamp(Math.log(lat.beta / 0.2) / Math.log(40), 0, 1)); Audio.setNoise(clamp(1 - (series[series.length - 1] ?? 0.5), 0, 1) * 0.9); if (running) Audio.sfx('tick'); }
+    draw(); raf = requestAnimationFrame(step);
+  }
+  function draw() {
+    const { ctx, w, h, stack } = geo; if (!ctx) return; const T = theme(); ctx.clearRect(0, 0, w, h);
+    let heat, box1, box2;
+    if (stack) { const side = Math.min(w - 20, h * 0.42); heat = { x: (w - side) / 2, y: 10, s: side }; box1 = { x: 50, y: heat.y + side + 36, w: w - 70, h: (h - heat.y - side - 66) / 2 - 20 }; box2 = { x: 50, y: box1.y + box1.h + 48, w: w - 70, h: box1.h }; }
+    else { const side = Math.min(h - 48, w * 0.46); heat = { x: 10, y: (h - side) / 2 - 10, s: side }; const px = heat.x + side + 60; box1 = { x: px, y: 16, w: w - px - 16, h: h / 2 - 50 }; box2 = { x: px, y: h / 2 + 26, w: w - px - 16, h: h / 2 - 64 }; }
+    const cell = heat.s / L; drawHeat(ctx, lat, { ox: heat.x, oy: heat.y, cell, T });
+    ctx.fillStyle = T.muted; ctx.font = `11px ${T.body}`; ctx.textAlign = 'left'; ctx.fillText(`${L}×${L} periodic lattice, bright = high plaquette energy`, heat.x, heat.y + heat.s + 14);
+    // time series
+    axes(ctx, T, box1, 'sweeps (last 400)', '⟨cos θ_P⟩');
+    const ex = exact(); const y0 = v => box1.y + box1.h - clamp(v, -0.1, 1.05) * box1.h / 1.1 - 0.05 * box1.h / 1.1;
+    const yv = v => box1.y + box1.h * (1 - (v + 0.1) / 1.2);
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = T.accent; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(box1.x, yv(ex)); ctx.lineTo(box1.x + box1.w, yv(ex)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = T.accent; ctx.textAlign = 'right'; ctx.fillText('exact', box1.x + box1.w, yv(ex) - 4);
+    if (series.length > 1) { ctx.strokeStyle = withAlpha(T.fg, 0.55); ctx.lineWidth = 1; ctx.beginPath(); series.forEach((v, i) => { const x = box1.x + i / 399 * box1.w; i ? ctx.lineTo(x, yv(v)) : ctx.moveTo(x, yv(v)); }); ctx.stroke(); }
+    const a = avg(); if (Number.isFinite(a)) { ctx.strokeStyle = T.energy; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(box1.x, yv(a)); ctx.lineTo(box1.x + box1.w, yv(a)); ctx.stroke(); ctx.fillStyle = T.energy; ctx.textAlign = 'left'; ctx.fillText('running avg', box1.x + 4, yv(a) - 4); }
+    ctx.fillStyle = T.muted; ctx.textAlign = 'right'; ctx.font = `10px ${T.mono}`; [0, 0.5, 1].forEach(v => ctx.fillText(v.toFixed(1), box1.x - 4, yv(v) + 3));
+    // beta curve
+    axes(ctx, T, box2, 'β', 'exact ⟨cos θ_P⟩');
+    const xb = b => box2.x + (b - 0.2) / 7.8 * box2.w, yb = v => box2.y + box2.h * (1 - v);
+    ctx.strokeStyle = T.accent; ctx.lineWidth = 1.5; ctx.beginPath(); for (let i = 0; i <= 80; i++) { const b = 0.2 + 7.8 * i / 80; const y = yb(Bessel.ratio(b)); i ? ctx.lineTo(xb(b), y) : ctx.moveTo(xb(b), y); } ctx.stroke();
+    ctx.font = `10px ${T.mono}`; ctx.fillStyle = T.muted; ctx.textAlign = 'center'; [1, 2, 4, 6, 8].forEach(b => ctx.fillText(String(b), xb(b), box2.y + box2.h + 12)); ctx.textAlign = 'right'; [0, 0.5, 1].forEach(v => ctx.fillText(v.toFixed(1), box2.x - 4, yb(v) + 3));
+    ctx.fillStyle = T.link; ctx.beginPath(); ctx.arc(xb(lat.beta), yb(Number.isFinite(a) ? a : (series[series.length - 1] ?? 0)), 4, 0, TAU); ctx.fill();
+    for (const r of records) { ctx.fillStyle = T.warn; ctx.beginPath(); ctx.arc(xb(r.beta), yb(r.avg), 5, 0, TAU); ctx.fill(); ctx.strokeStyle = T.fg; ctx.lineWidth = 1; ctx.stroke(); }
+    ctx.fillStyle = T.muted; ctx.font = `11px ${T.body}`; ctx.textAlign = 'left'; ctx.fillText('blue dot: your current β and average; gold: records', box2.x, box2.y - 6);
+  }
+  resize(); api.status('Running. Move β, wait for the running average to settle, then record.'); raf = requestAnimationFrame(step);
+  return { destroy() { cancelAnimationFrame(raf); if (Audio.active) { Audio.setNoise(0); Audio.setBrightness(0.5); } }, resize };
+}
+/* ---------- level 4: loop the loop ---------- */
+function levelLoops(api) {
+  const L = 12; let lat = new Lattice(L, 3.0); let raf = 0, speed = 4, shapes = new Map(), drag = null, done = false, reveal = false, frame = 0, accepted = false;
+  const canvas = el('canvas', { 'aria-label': 'Lattice heat map. Drag a rectangle to measure a Wilson loop. Plot of minus log W against area.' }); api.board.append(canvas);
+  const betaIn = el('input', { type: 'range', min: 2, max: 4, step: 0.1, value: 3, id: 'wl-beta' }), betaOut = el('span', { class: 'mono' }, '3.0');
+  const btnReveal = el('button', { class: 'btn small', onclick: () => { reveal = !reveal; btnReveal.classList.toggle('on', reveal); api.sfx('click'); } }, 'Show exact line');
+  const btnCheck = el('button', { class: 'btn primary small', onclick: check }, 'Check my σ');
+  const btnClear = el('button', { class: 'btn small', onclick: () => { shapes.clear(); api.sfx('click'); refreshTable(); } }, 'Clear loops');
+  const quick = el('div', { class: 'row' }, el('span', { class: 'muted' }, 'Quick add:'), ...['1x1', '1x2', '2x2', '2x3', '3x3', '2x4', '3x4', '4x4'].map((k, i) => el('button', { class: 'btn small ghost', onclick: () => { const [R, T] = k.split('x').map(Number); addShape(R, T, 1 + (i % 4) * 2, 1 + Math.floor(i / 4) * 5); } }, k.replace('x', '×'))));
+  api.board.append(el('div', { class: 'controls' }, el('div', { class: 'row' }, el('label', { for: 'wl-beta' }, 'β ', betaIn, betaOut), btnReveal, btnClear, btnCheck), quick));
+  const rSig = el('div', { class: 'v' }, '–'), rEx = el('div', { class: 'v' }, 'hidden'), rN = el('div', { class: 'v' }, '0');
+  const tbody = el('tbody'); const table = el('div', { class: 'table-wrap' }, el('table', { class: 'data' }, el('thead', {}, el('tr', {}, el('th', {}, 'loop'), el('th', {}, 'area'), el('th', {}, 'W'), el('th', {}, '−ln W'), el('th', {}, 'sweeps'))), tbody));
+  const cmpWrap = el('div', { hidden: true });
+  api.side.append(el('div', { class: 'readouts' },
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Fitted σ'), rSig),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Exact σ = −ln(I₁/I₀)'), rEx),
+    el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Distinct areas'), rN)), table, cmpWrap);
+  betaIn.oninput = () => { lat.beta = +betaIn.value; betaOut.textContent = lat.beta.toFixed(1); for (const s of shapes.values()) { s.n = 0; s.sum = 0; s.sq = 0; } lat.sweeps = 0; };
+  function sigmaExact() { return -Math.log(Bessel.ratio(lat.beta)); }
+  function addShape(R, T, x0 = 1, y0 = 1) {
+    if (R < 1 || T < 1 || R > 5 || T > 5 || R * T > 16) { api.toast('Loops up to 5 sites a side and area 16.'); api.sfx('bad'); return; }
+    const a = Math.min(R, T), b = Math.max(R, T), key = `${a}×${b}`;
+    if (!shapes.has(key)) { shapes.set(key, { R: a, T: b, n: 0, sum: 0, sq: 0, x0, y0 }); api.sfx('good'); api.status(`Measuring a ${key} loop at every position on the lattice, every sweep.`, 'good'); }
+    else { api.toast(`Already measuring ${key}.`); }
+    refreshTable();
+  }
+  function stats(s) { if (!s.n) return null; const W = s.sum / s.n; const varW = Math.max(0, s.sq / s.n - W * W); const err = Math.sqrt(varW / s.n); return { W, err, y: W > 0 ? -Math.log(W) : NaN, yerr: W > 0 ? err / W : NaN, A: s.R * s.T }; }
+  function fit() {
+    let num = 0, den = 0, k = 0; const areas = new Set();
+    for (const s of shapes.values()) { const st = stats(s); if (!st || s.n < 20 || st.W <= 0.02) continue; const w = 1 / Math.max(st.yerr, 1e-3) ** 2; num += w * st.A * st.y; den += w * st.A * st.A; k++; areas.add(st.A); }
+    return { sigma: den > 0 ? num / den : NaN, k, areas: areas.size };
+  }
+  function check() {
+    api.sfx('click'); const f = fit();
+    const ready = [...shapes.values()].filter(s => s.n >= 50).length;
+    if (f.areas < 3 || ready < 3) { api.toast('Measure at least three different loop areas, each for 50+ sweeps.'); return; }
+    const ex = sigmaExact(); const rel = Math.abs(f.sigma / ex - 1);
+    if (rel <= 0.10) { accepted = true; reveal = true; btnReveal.classList.add('on'); rEx.textContent = ex.toFixed(4); api.sfx('star'); api.burstAt(btnCheck, theme().warn, 30); api.status(`Accepted: σ = ${f.sigma.toFixed(3)} vs exact ${ex.toFixed(3)} (${pct(rel)} off). Area law confirmed.`, 'good'); api.progress(1); showComparison(rel <= 0.05 ? 3 : 2); }
+    else { api.sfx('bad'); api.status(`Off by ${pct(rel)}. Let the samples accumulate, or add a bigger loop so the fit has leverage.`, 'bad'); }
+  }
+  function showComparison(stars) {
+    cmpWrap.hidden = false; cmpWrap.innerHTML = '';
+    const c = el('canvas', { 'aria-label': 'Schematic potential between two static charges: area law rises linearly, perimeter law saturates.' });
+    cmpWrap.append(el('div', { class: 'eyebrow' }, 'Potential between two static charges'), c, el('p', { class: 'muted', style: 'font-size:.9rem' }, 'Area law: V(r) = σr keeps rising, so the charges never come apart. Perimeter law: V(r) saturates, so a finite energy frees them.'), el('button', { class: 'btn primary', onclick: () => { if (!done) { done = true; api.complete(stars); } } }, 'Continue'));
+    const f = fitCanvas(c, 1.8, 260); const T = theme(); const box = { x: 44, y: 14, w: f.w - 60, h: f.h - 48 };
+    axes(f.ctx, T, box, 'separation r', 'V(r)');
+    f.ctx.lineWidth = 2;
+    f.ctx.strokeStyle = T.accent; f.ctx.beginPath(); for (let i = 0; i <= 50; i++) { const r = i / 50; const v = 0.9 * r; const x = box.x + r * box.w, y = box.y + box.h * (1 - v); i ? f.ctx.lineTo(x, y) : f.ctx.moveTo(x, y); } f.ctx.stroke();
+    f.ctx.strokeStyle = T.link; f.ctx.beginPath(); for (let i = 1; i <= 50; i++) { const r = i / 50; const v = 0.62 - 0.05 / r; const x = box.x + r * box.w, y = box.y + box.h * (1 - clamp(v, 0, 1)); i === 1 ? f.ctx.moveTo(x, y) : f.ctx.lineTo(x, y); } f.ctx.stroke();
+    f.ctx.font = `12px ${T.body}`; f.ctx.textAlign = 'right'; f.ctx.fillStyle = T.accent; f.ctx.fillText('area law: confinement', box.x + box.w, box.y + 12); f.ctx.fillStyle = T.link; f.ctx.fillText('perimeter law: charges separate', box.x + box.w, box.y + box.h * 0.42);
+    api.sfx('unlock');
+  }
+  function refreshTable() {
+    tbody.innerHTML = ''; let n = 0;
+    for (const [key, s] of shapes) { const st = stats(s); n++; tbody.append(el('tr', {}, el('td', {}, key), el('td', {}, String(s.R * s.T)), el('td', {}, st ? st.W.toFixed(4) : '–'), el('td', {}, st && Number.isFinite(st.y) ? `${st.y.toFixed(3)} ± ${fmt(st.yerr, 3)}` : '–'), el('td', {}, String(s.n)))); }
+    const f = fit(); rSig.textContent = Number.isFinite(f.sigma) ? f.sigma.toFixed(4) : '–'; rN.textContent = String(f.areas); if (reveal) rEx.textContent = sigmaExact().toFixed(4);
+    if (!accepted) api.progress(Math.min(0.9, f.areas / 3 * 0.9));
+  }
+  let geo = {};
+  function resize() { const stack = (canvas.parentElement.clientWidth || 600) < 620; const f = fitCanvas(canvas, stack ? 0.8 : 2.0, 600); geo = { ctx: f.ctx, w: f.w, h: f.h, stack }; layout(); }
+  function layout() {
+    const { w, h, stack } = geo;
+    if (stack) { const side = Math.min(w - 20, h * 0.5); geo.heat = { x: (w - side) / 2, y: 10, s: side }; geo.box = { x: 54, y: geo.heat.y + side + 40, w: w - 74, h: h - side - 96 }; }
+    else { const side = Math.min(h - 48, w * 0.46); geo.heat = { x: 12, y: (h - side) / 2 - 10, s: side }; const px = geo.heat.x + side + 64; geo.box = { x: px, y: 20, w: w - px - 20, h: h - 70 }; }
+    geo.cell = geo.heat.s / L;
+  }
+  function siteFromEvent(e) { const p = canvasPos(canvas, e); const x = Math.round((p.x - geo.heat.x) / geo.cell), yy = Math.round((p.y - geo.heat.y) / geo.cell); if (x < 0 || x > L || yy < 0 || yy > L) return null; return { x, y: L - yy }; }
+  canvas.addEventListener('pointerdown', e => { const s = siteFromEvent(e); if (!s) return; drag = { x0: s.x, y0: s.y, x1: s.x, y1: s.y }; canvas.setPointerCapture(e.pointerId); api.sfx('click'); });
+  canvas.addEventListener('pointermove', e => { if (!drag) return; const s = siteFromEvent(e); if (s) { drag.x1 = clamp(s.x, 0, L); drag.y1 = clamp(s.y, 0, L); } });
+  const endDrag = () => { if (!drag) return; const R = Math.abs(drag.x1 - drag.x0), T = Math.abs(drag.y1 - drag.y0); if (R >= 1 && T >= 1) addShape(R, T, Math.min(drag.x0, drag.x1), Math.min(drag.y0, drag.y1)); drag = null; };
+  canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+  function step() {
+    const t0 = performance.now();
+    for (let k = 0; k < speed && performance.now() - t0 < 8; k++) { lat.sweep(); for (const s of shapes.values()) { const w = lat.wilson(s.R, s.T); s.n++; s.sum += w; s.sq += w * w; } }
+    frame++; if (frame % 12 === 0) refreshTable();
+    if (frame % 10 === 0 && Audio.active) { Audio.setBrightness(0.45 + 0.1 * (lat.beta - 2)); Audio.sfx('tick'); }
+    draw(); raf = requestAnimationFrame(step);
+  }
+  function draw() {
+    const { ctx, w, h, heat, box, cell } = geo; if (!ctx) return; const T = theme(); ctx.clearRect(0, 0, w, h);
+    drawHeat(ctx, lat, { ox: heat.x, oy: heat.y, cell, T });
+    const rectOf = (x0, y0, R, Tt) => [heat.x + x0 * cell, heat.y + (L - y0 - Tt) * cell, R * cell, Tt * cell];
+    ctx.save(); ctx.shadowColor = T.accent; ctx.shadowBlur = 10; ctx.strokeStyle = T.accent; ctx.lineWidth = 2.5;
+    for (const s of shapes.values()) { const [x, y, ww, hh] = rectOf(s.x0, s.y0, s.R, s.T); if (x + ww <= heat.x + heat.s + 1 && y >= heat.y - 1) ctx.strokeRect(x, y, ww, hh); }
+    ctx.restore();
+    if (drag) { const x0 = Math.min(drag.x0, drag.x1), y0 = Math.min(drag.y0, drag.y1), R = Math.abs(drag.x1 - drag.x0), Tt = Math.abs(drag.y1 - drag.y0); const [x, y, ww, hh] = rectOf(x0, y0, Math.max(R, 0.001), Math.max(Tt, 0.001)); ctx.setLineDash([5, 4]); ctx.strokeStyle = T.fg; ctx.lineWidth = 2; ctx.strokeRect(x, y, ww, hh); ctx.setLineDash([]); ctx.fillStyle = T.fg; ctx.font = `12px ${T.mono}`; ctx.textAlign = 'left'; ctx.fillText(`${R}×${Tt}`, x + 4, y - 6); }
+    ctx.fillStyle = T.muted; ctx.font = `11px ${T.body}`; ctx.textAlign = 'left'; ctx.fillText(`β = ${lat.beta.toFixed(1)}, drag a rectangle to measure a loop`, heat.x, heat.y + heat.s + 14);
+    // plot
+    axes(ctx, T, box, 'loop area (plaquettes)', '−ln W');
+    const f = fit(); const ex = sigmaExact();
+    let ymax = 1; for (const s of shapes.values()) { const st = stats(s); if (st && Number.isFinite(st.y)) ymax = Math.max(ymax, st.y * 1.25); } if (reveal) ymax = Math.max(ymax, ex * 17 * 1.05);
+    const xa = A => box.x + A / 17 * box.w, ya = y => box.y + box.h * (1 - clamp(y / ymax, 0, 1));
+    ctx.font = `10px ${T.mono}`; ctx.fillStyle = T.muted; ctx.textAlign = 'center'; [0, 4, 8, 12, 16].forEach(A => ctx.fillText(String(A), xa(A), box.y + box.h + 12)); ctx.textAlign = 'right'; [0, ymax / 2, ymax].forEach(v => ctx.fillText(v.toFixed(1), box.x - 4, ya(v) + 3));
+    const lineEnd = sig => Math.min(17, ymax / Math.max(sig, 1e-6));
+    if (reveal) { const Ae = lineEnd(ex); ctx.setLineDash([5, 4]); ctx.strokeStyle = T.accent; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(xa(0), ya(0)); ctx.lineTo(xa(Ae), ya(ex * Ae)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = T.accent; ctx.textAlign = 'right'; ctx.font = `11px ${T.body}`; ctx.fillText(`exact σ = ${ex.toFixed(3)}`, box.x + box.w, box.y + 26); }
+    if (Number.isFinite(f.sigma)) { const Ae = lineEnd(f.sigma); ctx.strokeStyle = T.energy; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xa(0), ya(0)); ctx.lineTo(xa(Ae), ya(f.sigma * Ae)); ctx.stroke(); ctx.fillStyle = T.energy; ctx.textAlign = 'left'; ctx.font = `11px ${T.body}`; ctx.fillText(`fit σ = ${f.sigma.toFixed(3)}`, box.x + 6, box.y + 12); }
+    for (const s of shapes.values()) { const st = stats(s); if (!st || !Number.isFinite(st.y)) continue; const x = xa(st.A), y = ya(st.y); const faded = st.W <= 0.02 || s.n < 20; ctx.strokeStyle = faded ? T.muted : T.fg; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, ya(st.y - st.yerr)); ctx.lineTo(x, ya(st.y + st.yerr)); ctx.stroke(); ctx.fillStyle = faded ? T.muted : T.link; ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill(); }
+  }
+  resize(); refreshTable(); api.status('Drag a rectangle on the lattice. Start small: 1×1, 1×2, 2×2.'); raf = requestAnimationFrame(step);
+  return { destroy() { cancelAnimationFrame(raf); if (Audio.active) Audio.setBrightness(0.5); }, resize };
+}
+
+/* ---------- level 5: zoom the coupling ---------- */
+function levelRunning(api) {
+  const theories = [
+    { key: 'qcd', name: 'QCD: SU(3) with 6 quark flavors', sub: 'b₀ = 11 − 2·6/3 = 7', b: 7 / TAU, a0: 0.118, grows: false, col: 'accent' },
+    { key: 'qed', name: 'QED with all Standard Model charged fermions', sub: 'one-loop coefficient 16/(3π), opposite sign', b: -16 / (3 * Math.PI), a0: 1 / 128, grows: true, col: 'link' },
+    { key: 'su17', name: 'Hypothetical SU(3) with 17 quark flavors', sub: 'b₀ = 11 − 2·17/3 = −1/3', b: (-1 / 3) / TAU, a0: 0.118, grows: true, col: 'energy' }
+  ];
+  const MU0 = 91.2; const alpha = (th, mu) => { const inv = 1 / th.a0 + th.b * Math.log(mu / MU0); return inv > 0 ? 1 / inv : Infinity; };
+  let revealed = false, anim = 0, raf = 0, logMu = Math.log10(91.2), done = false; const pred = {};
+  const canvas = el('canvas', { 'aria-label': 'Running couplings against energy on logarithmic axes.' }); api.board.append(canvas);
+  const muIn = el('input', { type: 'range', min: 0, max: 16, step: 0.05, value: Math.log10(91.2), id: 'rc-mu' }), muOut = el('span', { class: 'mono' }, '91 GeV');
+  api.board.append(el('div', { class: 'controls' }, el('div', { class: 'row' }, el('label', { for: 'rc-mu' }, 'Energy μ ', muIn, muOut)), el('p', { class: 'muted', style: 'font-size:.85rem' }, 'One loop, fixed particle content, thresholds ignored: the low-energy values are schematic, the directions are not.')));
+  const rows = theories.map(th => {
+    const verdict = el('span', { class: 'verdict muted' }, '');
+    const bS = el('button', { class: 'btn small', onclick: () => choose(th.key, false, bS, bG) }, 'Shrinks'), bG = el('button', { class: 'btn small', onclick: () => choose(th.key, true, bS, bG) }, 'Grows');
+    const val = el('span', { class: 'mono' }, '');
+    return { th, verdict, val, node: el('div', { class: 'theory' }, el('div', { class: 'nm' }, th.name, el('small', {}, th.sub)), el('div', { class: 'btn-row' }, bS, bG), verdict, val) };
+  });
+  const btnReveal = el('button', { class: 'btn primary', disabled: true, onclick: revealAll }, 'Reveal the curves');
+  const btnCont = el('button', { class: 'btn primary', hidden: true, onclick: () => { if (!done) { done = true; api.complete(stars()); } } }, 'Continue');
+  api.side.append(el('div', { class: 'eyebrow' }, 'Zoom in to higher energy. Does the coupling…'), el('div', { class: 'theories' }, ...rows.map(r => r.node)), el('div', { class: 'btn-row' }, btnReveal, btnCont));
+  function choose(key, grows, bS, bG) { if (revealed) return; pred[key] = grows; bS.classList.toggle('on', !grows); bG.classList.toggle('on', grows); api.sfx('click'); if (Object.keys(pred).length === 3) btnReveal.disabled = false; api.progress(Object.keys(pred).length / 3 * 0.6); }
+  function correct() { return theories.filter(th => pred[th.key] === th.grows).length; }
+  function stars() { const c = correct(); return c === 3 ? 3 : c === 2 ? 2 : 1; }
+  function revealAll() {
+    revealed = true; btnReveal.hidden = true; api.sfx(correct() === 3 ? 'fanfare' : 'good');
+    rows.forEach(r => { const ok = pred[r.th.key] === r.th.grows; r.verdict.textContent = ok ? 'correct' : (r.th.grows ? 'it grows' : 'it shrinks'); r.verdict.className = 'verdict ' + (ok ? 'status good' : 'status bad'); });
+    api.status(`${correct()} of 3 predictions right. Scrub the energy slider to read the couplings.`, correct() === 3 ? 'good' : ''); api.progress(0.8);
+    anim = reduceMotion() ? 1 : 0; btnCont.hidden = false; loop();
+  }
+  muIn.oninput = () => { logMu = +muIn.value; const mu = Math.pow(10, logMu); muOut.textContent = mu >= 1000 ? `10^${logMu.toFixed(1)} GeV` : `${mu.toFixed(0)} GeV`; update(); api.sfx('tick'); };
+  function update() { const mu = Math.pow(10, logMu); rows.forEach(r => { if (!revealed) return; const a = alpha(r.th, mu); r.val.textContent = Number.isFinite(a) ? `α = ${a.toFixed(4)}` : 'α → ∞'; }); draw(); }
+  let geo = {};
+  function resize() { const f = fitCanvas(canvas, 1.7, 520); geo = { ctx: f.ctx, w: f.w, h: f.h }; draw(); }
+  function loop() { if (anim < 1) { anim = Math.min(1, anim + 0.02); update(); raf = requestAnimationFrame(loop); } else update(); }
+  function draw() {
+    const { ctx, w, h } = geo; if (!ctx) return; const T = theme(); ctx.clearRect(0, 0, w, h);
+    const box = { x: 54, y: 18, w: w - 74, h: h - 64 }; axes(ctx, T, box, 'energy μ (GeV, log scale)', 'coupling α (log scale)');
+    const lyMin = Math.log10(0.004), lyMax = Math.log10(0.6);
+    const X = lm => box.x + lm / 16 * box.w, Y = a => box.y + box.h * (1 - (Math.log10(clamp(a, 0.004, 0.6)) - lyMin) / (lyMax - lyMin));
+    ctx.font = `10px ${T.mono}`; ctx.fillStyle = T.muted; ctx.textAlign = 'center';
+    for (let e = 0; e <= 16; e += 4) ctx.fillText(e === 0 ? '1' : `10^${e}`, X(e), box.y + box.h + 12);
+    ctx.textAlign = 'right'; [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5].forEach(a => { ctx.fillText(String(a), box.x - 4, Y(a) + 3); ctx.strokeStyle = withAlpha(T.fg, 0.08); ctx.beginPath(); ctx.moveTo(box.x, Y(a)); ctx.lineTo(box.x + box.w, Y(a)); ctx.stroke(); });
+    const marks = [[Math.log10(91.2), 'M_Z'], [4, 'LHC'], [15.95, 'GUT scale']];
+    ctx.setLineDash([3, 4]); marks.forEach(([lm, lab]) => { ctx.strokeStyle = withAlpha(T.fg, 0.35); ctx.beginPath(); ctx.moveTo(X(lm), box.y); ctx.lineTo(X(lm), box.y + box.h); ctx.stroke(); ctx.fillStyle = T.muted; ctx.textAlign = 'center'; ctx.font = `10px ${T.body}`; ctx.fillText(lab, X(lm), box.y - 6); }); ctx.setLineDash([]);
+    ctx.fillStyle = T.muted; ctx.textAlign = 'right'; ctx.font = `10px ${T.body}`; ctx.fillText('Planck scale (1.2×10¹⁹ GeV) and the QED Landau pole lie far off this axis →', box.x + box.w, box.y + box.h - 6);
+    if (revealed) {
+      theories.forEach(th => {
+        ctx.strokeStyle = T[th.col]; ctx.lineWidth = 2.2; ctx.beginPath(); let first = true;
+        const n = 160; const upto = Math.floor(n * anim);
+        for (let i = 0; i <= upto; i++) { const lm = 16 * i / n; const a = alpha(th, Math.pow(10, lm)); if (!Number.isFinite(a)) break; const x = X(lm), y = Y(a); first ? ctx.moveTo(x, y) : ctx.lineTo(x, y); first = false; }
+        ctx.stroke();
+        if (anim >= 1) { const a = alpha(th, Math.pow(10, 16)); ctx.fillStyle = T[th.col]; ctx.textAlign = 'right'; ctx.font = `11px ${T.body}`; ctx.fillText(th.key === 'qcd' ? 'QCD, 6 flavors' : th.key === 'qed' ? 'QED' : 'SU(3), 17 flavors', box.x + box.w - 4, Y(a) + (th.key === 'qed' ? 14 : -6)); }
+      });
+      ctx.strokeStyle = T.fg; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(logMu), box.y); ctx.lineTo(X(logMu), box.y + box.h); ctx.stroke();
+      theories.forEach(th => { const a = alpha(th, Math.pow(10, logMu)); if (Number.isFinite(a)) { ctx.fillStyle = T[th.col]; ctx.beginPath(); ctx.arc(X(logMu), Y(a), 5, 0, TAU); ctx.fill(); } });
+    } else { ctx.fillStyle = T.muted; ctx.textAlign = 'center'; ctx.font = `14px ${T.display || T.body}`; ctx.fillText('Make your three predictions, then reveal.', box.x + box.w / 2, box.y + box.h / 2); }
+  }
+  resize(); api.status('Three theories. For each one, predict what happens to the coupling as the energy rises.');
+  return { destroy() { cancelAnimationFrame(raf); }, resize };
+}
+
+/* ---------- level 6: sort the theories ---------- */
+function levelSort(api) {
+  const CARDS = [
+    ['Free scalar field, any dimension', 'built', 'A Gaussian measure. The free field exists in every dimension.'],
+    ['φ⁴ in 2 dimensions', 'built', 'Built by Nelson and by Glimm and Jaffe between the late 1960s and early 1970s.'],
+    ['φ⁴ in 3 dimensions', 'built', 'Glimm and Jaffe (1973), then Feldman and Osterwalder (1976) verified the Wightman axioms.'],
+    ['Yang–Mills in 2 dimensions', 'built', 'Exactly solvable: the plaquettes decouple, as you saw on the lattice.'],
+    ['Gross–Neveu model in 2 dimensions', 'built', 'Constructed in the 1980s by Gawędzki and Kupiainen and by Feldman, Magnen, Rivasseau and Sénéor.'],
+    ['φ⁴ in 4 dimensions', 'trivial', 'Aizenman and Duminil-Copin (2021): the scaling limit of the lattice model is a free field.'],
+    ['Yang–Mills in 3 dimensions', 'open', 'Partial results only, such as Chandra, Chevyrev, Hairer and Shen (2022) on stochastic quantization.'],
+    ['Yang–Mills in 4 dimensions', 'open', 'The Clay problem. The October 2026 OpenAI claim is unverified and unpublished.'],
+    ['QED in 4 dimensions', 'open', 'Expected to be trivial because of the Landau pole, but there is no proof either way.']
+  ];
+  const BINS = [['built', 'Rigorously constructed'], ['trivial', 'Shown trivial: no interacting limit'], ['open', 'Open']];
+  let placed = 0, mistakes = 0, selected = null, done = false;
+  const deck = el('div', { class: 'deck' });
+  const bins = BINS.map(([id, label]) => { const b = el('div', { class: 'bin', tabindex: 0, role: 'button', 'aria-label': `${label}. Press Enter to place the selected card here.`, dataset: { bin: id } }, el('h4', {}, label)); b.addEventListener('click', () => { if (selected) tryPlace(selected, id); }); b.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && selected) { e.preventDefault(); tryPlace(selected, id); } }); return b; });
+  const why = el('div', { class: 'status' }, '');
+  const axiomsPanel = el('div', { class: 'card', hidden: true });
+  api.board.append(el('div', { class: 'sort-area' }, el('p', { class: 'muted', style: 'font-size:.9rem' }, 'Drag a card to a bin, or click a card and then a bin. Keyboard: Tab to a card, Enter to select, Tab to a bin, Enter to place.'), deck, el('div', { class: 'bins' }, ...bins), why, axiomsPanel));
+  const rP = el('div', { class: 'v' }, '0 / 9'), rM = el('div', { class: 'v' }, '0');
+  api.side.append(el('div', { class: 'readouts' }, el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Placed'), rP), el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Bounced'), rM)));
+  const order = CARDS.map((c, i) => i).sort(() => Math.random() - 0.5);
+  for (const i of order) {
+    const [name, bin, reason] = CARDS[i];
+    const card = el('div', { class: 'tcard', tabindex: 0, role: 'button', 'aria-label': `${name}. Press Enter to select.` }, name); card._bin = bin; card._reason = reason; card._name = name;
+    let dragState = null;
+    card.addEventListener('pointerdown', e => { if (card.classList.contains('placed')) return; const r = card.getBoundingClientRect(); dragState = { sx: e.clientX, sy: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, w: r.width, moved: false }; card.setPointerCapture(e.pointerId); });
+    card.addEventListener('pointermove', e => { if (!dragState) return; const dx = e.clientX - dragState.sx, dy = e.clientY - dragState.sy; if (!dragState.moved && dx * dx + dy * dy < 36) return; if (!dragState.moved) { dragState.moved = true; card.classList.add('dragging'); card.style.width = dragState.w + 'px'; bins.forEach(b => b.classList.remove('over')); } card.style.left = (e.clientX - dragState.ox) + 'px'; card.style.top = (e.clientY - dragState.oy) + 'px'; const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('.bin'); bins.forEach(b => b.classList.toggle('over', b === over)); });
+    const end = e => { if (!dragState) return; const st = dragState; dragState = null; if (st.moved) { const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('.bin'); card.classList.remove('dragging'); card.style.left = card.style.top = card.style.width = ''; bins.forEach(b => b.classList.remove('over')); if (over) tryPlace(card, over.dataset.bin); } else select(card); };
+    card.addEventListener('pointerup', end); card.addEventListener('pointercancel', end);
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(card); } });
+    deck.append(card);
+  }
+  function select(card) { if (card.classList.contains('placed')) return; $$('.tcard', deck).forEach(c => c.classList.remove('sel')); selected = card; card.classList.add('sel'); api.sfx('click'); why.textContent = `Selected: ${card._name}. Now click a bin.`; why.className = 'status'; }
+  function tryPlace(card, binId) {
+    if (card.classList.contains('placed')) return;
+    if (card._bin === binId) {
+      card.classList.remove('sel'); card.classList.add('placed'); card.removeAttribute('tabindex'); card.append(el('small', {}, card._reason));
+      bins.find(b => b.dataset.bin === binId).append(card); placed++; selected = null; api.sfx('good'); api.burstAt(card, theme().good, 16);
+      why.textContent = card._reason; why.className = 'status good'; rP.textContent = `${placed} / 9`; api.progress(placed / 9);
+      if (placed === 9) finish();
+    } else {
+      mistakes++; rM.textContent = String(mistakes); api.sfx('bad'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+      why.textContent = 'Not there. ' + card._reason; why.className = 'status bad';
+    }
+  }
+  function finish() {
+    api.sfx('unlock'); axiomsPanel.hidden = false;
+    axiomsPanel.append(el('div', { class: 'eyebrow' }, 'What "exists" has to satisfy'), el('h3', {}, 'The Osterwalder–Schrader checklist'),
+      el('ol', { class: 'axioms' },
+        el('li', {}, el('b', {}, 'Euclidean invariance.'), ' Correlation functions do not change under rotations and translations of Euclidean space.'),
+        el('li', {}, el('b', {}, 'Reflection positivity.'), ' Reflecting across a hyperplane and pairing gives a positive quantity. This becomes the positive inner product of the Hilbert space.'),
+        el('li', {}, el('b', {}, 'Symmetry.'), ' Correlation functions are symmetric under permuting their arguments (for bosons).'),
+        el('li', {}, el('b', {}, 'Cluster property.'), ' Far-apart regions decorrelate. This gives a unique vacuum.'),
+        el('li', {}, el('b', {}, 'Regularity.'), ' A growth bound on the correlation functions (added in 1975) so the reconstruction converges.')),
+      el('p', { class: 'muted', style: 'font-size:.9rem' }, 'Osterwalder and Schrader (1973, 1975): satisfy these and a relativistic quantum field theory obeying the Wightman axioms can be reconstructed. "Existence of Yang–Mills" means producing correlation functions of a non-trivial theory that pass this checklist in four dimensions.'),
+      el('button', { class: 'btn primary', onclick: () => { if (!done) { done = true; api.complete(mistakes <= 1 ? 3 : mistakes <= 3 ? 2 : 1); } } }, 'Continue'));
+    api.status('All nine placed. Read the checklist, then continue.', 'good');
+  }
+  api.status('Nine theories, three bins.');
+  return { destroy() {}, resize() {} };
+}
+
+/* ---------- level 7 (boss): gap or no gap ---------- */
+function levelGap(api) {
+  const ROUNDS = 4; let round = 0, data = null, decided = false, points = 0, maxPoints = 0, done = false, mEst = 0.4;
+  const canvas = el('canvas', { 'aria-label': 'Semi-log plot of a correlation function against distance.' }); api.board.append(canvas);
+  const bGap = el('button', { class: 'btn small', onclick: () => decide(true) }, 'Gapped'), bNo = el('button', { class: 'btn small', onclick: () => decide(false) }, 'Gapless');
+  const mIn = el('input', { type: 'range', min: 0.05, max: 1.2, step: 0.01, value: 0.4, id: 'gap-m' }), mOut = el('span', { class: 'mono' }, '0.40');
+  const mRow = el('div', { class: 'row', hidden: true }, el('label', { for: 'gap-m' }, 'Your slope m ', mIn, mOut), el('button', { class: 'btn primary small', onclick: lockIn }, 'Lock in'));
+  const bNext = el('button', { class: 'btn primary small', hidden: true, onclick: nextRound }, 'Next correlator');
+  const clayPanel = el('div', { class: 'card', hidden: true });
+  api.board.append(el('div', { class: 'controls' }, el('div', { class: 'row' }, el('span', { class: 'muted' }, 'Verdict:'), bGap, bNo, bNext), mRow), clayPanel);
+  const rR = el('div', { class: 'v' }, '1 / 4'), rPts = el('div', { class: 'v' }, '0'), rTrue = el('div', { class: 'v' }, '–');
+  api.side.append(el('div', { class: 'readouts' }, el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Correlator'), rR), el('div', { class: 'readout' }, el('div', { class: 'k' }, 'Points'), rPts), el('div', { class: 'readout' }, el('div', { class: 'k' }, 'True m (after lock-in)'), rTrue)));
+  mIn.oninput = () => { mEst = +mIn.value; mOut.textContent = mEst.toFixed(2); draw(); api.sfx('tick'); };
+  function gen() {
+    const gapped = Math.random() < 0.55 || (round === 1); const r = [], y = [];
+    const m = rand(0.2, 0.8), p = rand(0.8, 2.0);
+    for (let i = 1; i <= 16; i++) { r.push(i); const noise = (Math.random() + Math.random() + Math.random() - 1.5) * 0.12; y.push((gapped ? -m * i : -p * Math.log(i)) + noise); }
+    return { gapped, m, p, r, y };
+  }
+  function nextRound() {
+    round++; if (round > ROUNDS) { showClay(); return; }
+    data = gen(); decided = false; bNext.hidden = true; mRow.hidden = true; bGap.disabled = bNo.disabled = false; bGap.classList.remove('on', 'correct'); bNo.classList.remove('on', 'correct'); rTrue.textContent = '–';
+    rR.textContent = `${round} / ${ROUNDS}`; api.progress((round - 1) / ROUNDS * 0.8); api.status('Is this correlator gapped or gapless? Look for a straight line on the log scale.'); api.sfx('click'); draw();
+  }
+  function decide(gap) {
+    if (decided) return; decided = true; bGap.disabled = bNo.disabled = true; const ok = gap === data.gapped;
+    maxPoints += data.gapped ? 3 : 1;
+    if (ok) { points += 1; api.sfx('good'); (gap ? bGap : bNo).classList.add('on'); }
+    else { api.sfx('bad'); }
+    rPts.textContent = String(points);
+    if (data.gapped) {
+      if (ok) { api.status('Right: straight line, exponential decay. Now match the slope to estimate the mass m.', 'good'); mRow.hidden = false; mIn.value = 0.4; mEst = 0.4; mOut.textContent = '0.40'; }
+      else { api.status(`It was gapped: ln C(r) is a straight line with slope −m, m = ${data.m.toFixed(2)}.`, 'bad'); rTrue.textContent = data.m.toFixed(2); bNext.hidden = false; }
+    } else {
+      api.status(ok ? 'Right: the curve bends, a power law, so there is no gap and the excitations are massless.' : 'It was gapless: ln C(r) = −p ln r bends on this plot. A gap would give a straight line.', ok ? 'good' : 'bad');
+      bNext.hidden = false;
+    }
+    draw();
+  }
+  function lockIn() {
+    const rel = Math.abs(mEst - data.m) / data.m; let got = rel <= 0.15 ? 2 : rel <= 0.30 ? 1 : 0; points += got; rPts.textContent = String(points); rTrue.textContent = data.m.toFixed(2);
+    api.status(got === 2 ? `Within ${pct(rel)}: m ≈ ${data.m.toFixed(2)}. Clean measurement.` : got === 1 ? `Within ${pct(rel)}. True m = ${data.m.toFixed(2)}.` : `Off by ${pct(rel)}. True m = ${data.m.toFixed(2)}.`, got ? 'good' : 'bad');
+    api.sfx(got === 2 ? 'star' : got === 1 ? 'good' : 'bad'); if (got === 2) api.burstAt(canvas, theme().warn, 24);
+    mRow.hidden = true; bNext.hidden = false; draw();
+  }
+  function fitIntercept(m) { let s = 0; for (let i = 0; i < data.r.length; i++) s += data.y[i] + m * data.r[i]; return s / data.r.length; }
+  function stars() { const frac = maxPoints ? points / maxPoints : 0; return frac >= 0.75 ? 3 : frac >= 0.45 ? 2 : 1; }
+  function showClay() {
+    api.progress(0.9); bGap.hidden = bNo.hidden = true; bNext.hidden = true; mRow.hidden = true; clayPanel.hidden = false;
+    clayPanel.append(el('div', { class: 'eyebrow' }, 'Clay Mathematics Institute, Millennium Prize problem (Jaffe and Witten, 2000)'), el('h3', {}, 'Quantum Yang–Mills theory: the statement in plain words'),
+      el('p', {}, 'For any compact simple gauge group G, prove that a non-trivial quantum Yang–Mills theory exists on four-dimensional Euclidean space (equivalently, Minkowski spacetime) and satisfies axioms at least as strong as the Wightman axioms. Prove, in addition, that the theory has a mass gap: there is a Δ > 0 such that every state other than the vacuum has energy at least Δ.'),
+      el('p', { class: 'muted', style: 'font-size:.92rem' }, 'Two halves. Existence says the path integral you sampled on the lattice has a well-defined continuum limit that is a genuine quantum field theory. The mass gap says the lightest glueball has a positive mass, the mathematical form of the short range of the strong force. Lattice computations support both; neither has a proof.'),
+      el('button', { class: 'btn primary', onclick: () => { if (!done) { done = true; api.complete(stars()); } } }, 'Start the six questions'));
+    api.status(`Correlators done: ${points} of ${maxPoints} points.`, 'good'); api.sfx('unlock');
+  }
+  let geo = {};
+  function resize() { const f = fitCanvas(canvas, 1.75, 480); geo = { ctx: f.ctx, w: f.w, h: f.h }; draw(); }
+  function draw() {
+    const { ctx, w, h } = geo; if (!ctx || !data) return; const T = theme(); ctx.clearRect(0, 0, w, h);
+    const box = { x: 56, y: 16, w: w - 76, h: h - 62 }; axes(ctx, T, box, 'distance r (lattice units)', 'ln C(r)');
+    const ymin = Math.min(...data.y) - 0.6, ymax = 0.5;
+    const X = r => box.x + (r - 0.5) / 16 * box.w, Y = v => box.y + box.h * (1 - (v - ymin) / (ymax - ymin));
+    ctx.font = `10px ${T.mono}`; ctx.fillStyle = T.muted; ctx.textAlign = 'center'; [1, 4, 8, 12, 16].forEach(r => ctx.fillText(String(r), X(r), box.y + box.h + 12)); ctx.textAlign = 'right';
+    const step = Math.max(1, Math.round((ymax - ymin) / 5)); for (let v = 0; v >= ymin; v -= step) ctx.fillText(v.toFixed(0), box.x - 4, Y(v) + 3);
+    for (let i = 0; i < data.r.length; i++) { const x = X(data.r[i]), y = Y(data.y[i]); ctx.strokeStyle = withAlpha(T.fg, 0.5); ctx.beginPath(); ctx.moveTo(x, Y(data.y[i] - 0.1)); ctx.lineTo(x, Y(data.y[i] + 0.1)); ctx.stroke(); ctx.fillStyle = T.link; ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill(); }
+    if (decided && data.gapped && !mRow.hidden) { const c = fitIntercept(mEst); ctx.strokeStyle = T.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(1), Y(c - mEst)); ctx.lineTo(X(16), Y(c - mEst * 16)); ctx.stroke(); ctx.fillStyle = T.accent; ctx.textAlign = 'left'; ctx.font = `11px ${T.body}`; ctx.fillText(`slope −${mEst.toFixed(2)}`, X(1) + 6, Y(c - mEst) - 8); }
+    if (decided && rTrue.textContent !== '–' && data.gapped) { const c = fitIntercept(data.m); ctx.setLineDash([5, 4]); ctx.strokeStyle = T.good; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(1), Y(c - data.m)); ctx.lineTo(X(16), Y(c - data.m * 16)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = T.good; ctx.textAlign = 'right'; ctx.font = `11px ${T.body}`; ctx.fillText(`true slope −${data.m.toFixed(2)}`, X(16), Y(c - data.m * 16) - 8); }
+    if (decided && !data.gapped) { ctx.setLineDash([5, 4]); ctx.strokeStyle = T.good; ctx.lineWidth = 1.5; ctx.beginPath(); for (let i = 1; i <= 16; i++) { const v = -data.p * Math.log(i); i === 1 ? ctx.moveTo(X(i), Y(v)) : ctx.lineTo(X(i), Y(v)); } ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = T.good; ctx.textAlign = 'left'; ctx.font = `11px ${T.body}`; ctx.fillText(`power law r^−${data.p.toFixed(2)}`, X(8), Y(-data.p * Math.log(8)) - 10); }
+  }
+  resize(); nextRound();
+  return { destroy() {}, resize };
+}
+
+const LEVEL_IMPL = [levelField, levelGauge, levelMC, levelLoops, levelRunning, levelSort, levelGap];
+/* ---------- shell: state, screens, quick checks, drawer, boot ---------- */
+const SAVE_KEY = 'gauge-gap-v1';
+const state = { screen: 'title', level: 0, score: 0, streak: 0, stars: [0, 0, 0, 0, 0, 0, 0], completed: [false, false, false, false, false, false, false], music: true, sfx: true, unlockAll: false, levelStart: 0 };
+function load() { try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return; const s = JSON.parse(raw); for (const k of ['score', 'stars', 'completed', 'music', 'sfx', 'unlockAll']) if (k in s) state[k] = s[k]; if (!Array.isArray(state.stars) || state.stars.length !== 7) state.stars = [0, 0, 0, 0, 0, 0, 0]; if (!Array.isArray(state.completed) || state.completed.length !== 7) state.completed = [false, false, false, false, false, false, false]; } catch (e) { /* storage unavailable */ } }
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify({ score: state.score, stars: state.stars, completed: state.completed, music: state.music, sfx: state.sfx, unlockAll: state.unlockAll })); } catch (e) { /* no-op */ } }
+
+const main = $('#main'), hud = $('#hud'), overlayRoot = $('#overlay-root');
+let current = null, timerInt = 0, heroRaf = 0;
+
+function setHUD() {
+  $('#hud-score').textContent = String(state.score); $('#hud-streak').textContent = String(state.streak);
+  const bm = $('#btn-music'), bs = $('#btn-sfx');
+  bm.classList.toggle('on', state.music); bm.setAttribute('aria-pressed', String(state.music)); bm.textContent = state.music ? 'Music on' : 'Music off';
+  bs.classList.toggle('on', state.sfx); bs.setAttribute('aria-pressed', String(state.sfx)); bs.textContent = state.sfx ? 'SFX on' : 'SFX off';
+}
+function syncAudio() { if (Audio.active) { Audio.setMusic(state.music); Audio.setSfx(state.sfx); } }
+function ensureAudio() { if (!Audio.active && (state.music || state.sfx)) { Audio.init(); } Audio.resume(); syncAudio(); }
+function teardown() { if (current && current.impl && current.impl.destroy) current.impl.destroy(); current = null; clearInterval(timerInt); cancelAnimationFrame(heroRaf); heroRaf = 0; overlayRoot.innerHTML = ''; }
+function starStr(n) { return '★'.repeat(n) + '☆'.repeat(3 - n); }
+
+/* title */
+function showTitle() {
+  teardown(); state.screen = 'title'; hud.hidden = true; main.innerHTML = '';
+  const hero = el('canvas', { class: 'lattice-hero', 'aria-hidden': 'true' });
+  const play = el('button', { class: 'btn primary', onclick: () => { state.music = true; state.sfx = true; Audio.init(); Audio.resume(); syncAudio(); save(); Audio.sfx('unlock'); showMap(); } }, 'Play with sound');
+  const muted = el('button', { class: 'btn', onclick: () => { state.music = false; state.sfx = false; save(); showMap(); } }, 'Play muted');
+  const reset = el('button', { class: 'btn small ghost', onclick: () => { state.score = 0; state.streak = 0; state.stars = [0, 0, 0, 0, 0, 0, 0]; state.completed = state.completed.map(() => false); state.unlockAll = false; save(); toast('Progress reset.'); showTitle(); } }, 'Reset progress');
+  main.append(el('section', { class: 'title-screen' },
+    el('div', { class: 'eyebrow' }, 'A lattice gauge theory game in seven levels'),
+    el('h1', {}, 'Gauge & Gap'),
+    el('p', { class: 'promise' }, 'Learn what a quantum field theory is, what gauge symmetry does, and what the Yang–Mills problem asks, by running your own lattice, in about 25 minutes.'),
+    hero,
+    el('div', { class: 'btn-row' }, play, muted),
+    el('div', {}, el('div', { class: 'eyebrow' }, 'What you will learn'), el('ul', {},
+      el('li', {}, 'Why quantum field theory is statistical mechanics in disguise, and what an action does.'),
+      el('li', {}, 'What a gauge transformation changes and what it cannot touch.'),
+      el('li', {}, 'How Monte Carlo sampling computes a path integral, checked against an exact answer.'),
+      el('li', {}, 'What Wilson loops, the area law and the string tension say about confinement.'),
+      el('li', {}, 'Why asymptotic freedom matters, what "existence" means, and what a mass gap is.'))),
+    el('div', { class: 'btn-row' }, reset, el('span', { class: 'board-note' }, 'Progress and sound settings are kept in this browser only.'))));
+  // hero animation: a small lattice under slow gauge transformations; plaquette tints never change
+  const lat = new OpenLattice(7).randomize(); let t0 = performance.now(), site = null, remaining = 0, rate = 0;
+  const f = fitCanvas(hero, 2.5, 230);
+  function frame(ts) {
+    const dt = Math.min(0.05, (ts - t0) / 1000); t0 = ts;
+    if (!reduceMotion()) {
+      if (!site || remaining <= 0) { site = { x: 1 + Math.floor(Math.random() * 5), y: 1 + Math.floor(Math.random() * 5) }; remaining = rand(0.6, 1.4); rate = pick([-1, 1]) * rand(1.5, 3); }
+      const d = rate * dt; lat.gauge(site.x, site.y, d); remaining -= dt;
+    }
+    const T = theme(); f.ctx.clearRect(0, 0, f.w, f.h);
+    const cell = Math.min((f.w - 40) / 6, (f.h - 40) / 6); const ox = (f.w - cell * 6) / 2, oy = 24 + (f.h - 40 - cell * 6) / 2;
+    drawOpen(f.ctx, lat, { ox, oy, cell, T, sel: site, label: 'links turn, plaquettes stay' });
+    heroRaf = requestAnimationFrame(frame);
+  }
+  heroRaf = requestAnimationFrame(frame);
+}
+
+/* map */
+function showMap() {
+  teardown(); state.screen = 'map'; hud.hidden = false; setHUD();
+  $('#hud-eyebrow').textContent = 'Choose a level'; $('#hud-title').textContent = 'Gauge & Gap'; $('#hud-progress').style.width = (state.completed.filter(Boolean).length / 7 * 100) + '%'; $('#hud-timer').textContent = '–';
+  main.innerHTML = '';
+  const nodes = LEVELS.map((lv, i) => {
+    const locked = !state.unlockAll && i > 0 && !state.completed[i - 1];
+    const n = el('button', { class: 'node' + (locked ? ' locked' : '') + (state.completed[i] ? ' done' : '') + (i === 6 ? ' boss' : ''), 'aria-label': `${locked ? 'Locked. ' : ''}Level ${i + 1}: ${lv.title}`, onclick: () => { if (locked) { Audio.sfx('bad'); toast('Finish the previous level first, or use Skip ahead.'); return; } Audio.sfx('click'); showLevel(i); } },
+      el('span', { class: 'num' }, i === 6 ? 'Boss' : `Level ${i + 1}`), el('span', { class: 'name' }, lv.title), el('span', { class: 'topic' }, lv.topic),
+      el('span', { class: 'stars', 'aria-label': `${state.stars[i]} of 3 stars` }, state.completed[i] ? starStr(state.stars[i]) : (locked ? 'locked' : 'not played')));
+    return n;
+  });
+  const skip = el('button', { class: 'btn small ghost', onclick: () => { state.unlockAll = true; save(); Audio.sfx('unlock'); showMap(); } }, 'Skip ahead: unlock every level');
+  main.append(el('section', { class: 'map' }, el('div', {}, el('div', { class: 'eyebrow' }, 'Seven levels, two to five minutes each'), el('h2', {}, 'The lattice path')), el('div', { class: 'map-path' }, ...nodes), el('div', { class: 'btn-row' }, state.unlockAll ? el('span', { class: 'muted' }, 'All levels unlocked.') : skip, el('button', { class: 'btn small ghost', onclick: () => { Audio.sfx('click'); showTitle(); } }, 'Title screen'))));
+  window.scrollTo(0, 0);
+}
+
+/* level */
+function showLevel(i) {
+  teardown(); i = clamp(i | 0, 0, 6); state.screen = 'level'; state.level = i; hud.hidden = false; setHUD();
+  const lv = LEVELS[i];
+  $('#hud-eyebrow').textContent = `Level ${i + 1} of 7 · ${lv.topic}`; $('#hud-title').textContent = lv.title; $('#hud-progress').style.width = '0%';
+  main.innerHTML = '';
+  const board = el('div', { class: 'board' }); const status = el('div', { class: 'status', role: 'status' });
+  const extra = el('div', { style: 'display:grid;gap:.7rem;min-width:0' });
+  const side = el('div', { class: 'side' },
+    el('div', { class: 'card' }, el('div', { class: 'eyebrow' }, `Level ${i + 1} · ${lv.topic}`), el('h2', {}, lv.title), el('p', { html: lv.card }), el('div', { class: 'goal', html: lv.goal })),
+    el('details', { class: 'deeper' }, el('summary', {}, 'Deeper'), el('div', { class: 'body', html: lv.deeper })),
+    extra);
+  main.append(el('div', { class: 'level' }, board, side));
+  let completedFlag = false;
+  const api = {
+    board, side: extra,
+    status(t, kind) { status.textContent = t; status.className = 'status' + (kind ? ' ' + kind : ''); },
+    progress(f) { $('#hud-progress').style.width = (clamp(f, 0, 1) * 100).toFixed(1) + '%'; },
+    complete(stars) { if (completedFlag) return; completedFlag = true; onComplete(i, clamp(stars | 0, 1, 3)); },
+    sfx: n => Audio.sfx(n), burstAt: (elm, color, n) => FX.burstAt(elm, color, n), toast
+  };
+  const impl = LEVEL_IMPL[i](api); board.append(status);
+  current = { impl, api, idx: i };
+  state.levelStart = Date.now(); clearInterval(timerInt);
+  timerInt = setInterval(() => { const s = Math.floor((Date.now() - state.levelStart) / 1000); $('#hud-timer').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }, 1000);
+  $('#hud-timer').textContent = '0:00';
+  window.scrollTo(0, 0);
+}
+
+async function onComplete(i, stars) {
+  Audio.sfx('fanfare'); FX.burst(innerWidth / 2, innerHeight / 3, cssVar('--accent'), 60); FX.burst(innerWidth / 2, innerHeight / 3, cssVar('--energy'), 40);
+  const gained = 100 + 50 * stars; state.score += gained; state.stars[i] = Math.max(state.stars[i], stars); state.completed[i] = true; save(); setHUD();
+  await sleep(700);
+  const res = await runCheck(LEVELS[i].questions, LEVELS[i].title);
+  save(); setHUD();
+  if (i < 6) showDone(i, stars, gained, res); else showRecap(res);
+}
+
+function runCheck(questions, title) {
+  return new Promise(resolve => {
+    let k = 0, correct = 0; const dlg = el('div', { class: 'dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Quick check' });
+    const shuffleIdx = (n) => { const a = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const overlay = el('div', { class: 'overlay' }, dlg); overlayRoot.innerHTML = ''; overlayRoot.append(overlay);
+    function render() {
+      const q = questions[k]; dlg.innerHTML = '';
+      const count = el('div', { class: 'count' }, `Quick check · ${title} · question ${k + 1} of ${questions.length}`);
+      const fb = el('div', { class: 'feedback' }); const next = el('button', { class: 'btn primary', hidden: true, onclick: () => { Audio.sfx('click'); k++; if (k < questions.length) render(); else { overlayRoot.innerHTML = ''; resolve({ correct, total: questions.length }); } } }, k + 1 < questions.length ? 'Next question' : 'Finish');
+      const perm = shuffleIdx(q.opts.length);
+      const opts = perm.map((orig, j) => el('button', { class: 'opt', onclick: () => {
+        if (next.hidden === false) return;
+        const ok = orig === q.a; $$('.opt', dlg).forEach((b, jj) => { b.disabled = true; if (perm[jj] === q.a) b.classList.add('correct'); else if (jj === j) b.classList.add('wrong'); });
+        if (ok) { correct++; state.score += 50; state.streak++; Audio.sfx('good'); FX.burstAt(opts[j], cssVar('--good'), 14); fb.textContent = 'Correct. ' + q.why; fb.className = 'feedback good'; }
+        else { state.streak = 0; Audio.sfx('bad'); fb.textContent = 'Not quite. ' + q.why; fb.className = 'feedback bad'; }
+        setHUD(); next.hidden = false; next.focus();
+      } }, q.opts[orig]));
+      dlg.append(count, el('div', { class: 'q' }, q.q), el('div', { class: 'options' }, ...opts), fb, el('div', { class: 'btn-row' }, next));
+      opts[0].focus();
+      if (window.__game && window.__game.auto) setTimeout(() => { opts[perm.indexOf(q.a)].click(); setTimeout(() => next.click(), 30); }, 30);
+    }
+    render();
+  });
+}
+
+function showDone(i, stars, gained, res) {
+  const dlg = el('div', { class: 'dialog done-panel', role: 'dialog', 'aria-modal': 'true' },
+    el('div', { class: 'eyebrow' }, `Level ${i + 1} complete`), el('h2', {}, LEVELS[i].title),
+    el('div', { class: 'stars-big', 'aria-label': `${stars} of 3 stars` }, starStr(stars)),
+    el('p', {}, `+${gained} for the level, +${res.correct * 50} for ${res.correct} of ${res.total} quick-check answers. Score ${state.score}.`),
+    el('div', { class: 'btn-row' },
+      el('button', { class: 'btn primary', onclick: () => { Audio.sfx('click'); showLevel(i + 1); } }, i + 1 === 6 ? 'On to the boss' : 'Next level'),
+      el('button', { class: 'btn', onclick: () => { Audio.sfx('click'); showMap(); } }, 'Back to the map')));
+  overlayRoot.innerHTML = ''; overlayRoot.append(el('div', { class: 'overlay' }, dlg)); $('.btn.primary', dlg).focus();
+}
+
+function showRecap(res) {
+  teardown(); state.screen = 'recap'; hud.hidden = false; setHUD();
+  $('#hud-eyebrow').textContent = 'Boss cleared'; $('#hud-title').textContent = 'What you now understand'; $('#hud-progress').style.width = '100%'; $('#hud-timer').textContent = '–';
+  main.innerHTML = '';
+  main.append(el('section', { class: 'recap' },
+    el('div', {}, el('div', { class: 'eyebrow' }, `Final score ${state.score} · stars ${state.stars.reduce((a, b) => a + b, 0)} of 21`), el('h2', {}, 'What you now understand')),
+    el('ul', {}, ...RECAP.map(r => el('li', {}, r))),
+    el('h2', {}, 'Where the frontier is'),
+    el('div', { class: 'frontier', html: FRONTIER }),
+    el('div', { class: 'btn-row' }, el('button', { class: 'btn primary', onclick: () => { Audio.sfx('click'); showMap(); } }, 'Back to the map'), el('button', { class: 'btn', onclick: () => { Audio.sfx('click'); openDrawer('gloss'); } }, 'Open the field notes'))));
+  if (res && res.correct === res.total) toast('Perfect quick check on the boss.');
+  window.scrollTo(0, 0);
+}
+
+/* drawer */
+const drawer = $('#drawer'), drawerContent = $('#drawer-content');
+function renderDrawer(tab) {
+  $$('.tab', drawer).forEach(t => t.classList.toggle('on', t.dataset.tab === tab)); drawerContent.innerHTML = '';
+  if (tab === 'gloss') { const dl = el('dl', { class: 'gloss' }); GLOSSARY.forEach(([t, d]) => dl.append(el('dt', {}, t), el('dd', {}, d))); drawerContent.append(dl); }
+  else drawerContent.append(el('p', { class: 'muted', style: 'margin-bottom:.6rem;font-size:.9rem' }, 'Primary literature behind the levels. The OpenAI physics manuscripts are not public; everything said about them here comes from the announcement as relayed by secondary coverage.'), el('ol', { class: 'sources' }, ...SOURCES.map(s => el('li', {}, s))));
+}
+function openDrawer(tab = 'gloss') { renderDrawer(tab); drawer.hidden = false; $('#drawer-close').focus(); }
+$('#drawer-close').addEventListener('click', () => { Audio.sfx('click'); drawer.hidden = true; });
+$$('.tab', drawer).forEach(t => t.addEventListener('click', () => { Audio.sfx('click'); renderDrawer(t.dataset.tab); }));
+$('#btn-notes').addEventListener('click', () => { Audio.sfx('click'); openDrawer('gloss'); });
+$('#btn-map').addEventListener('click', () => { Audio.sfx('click'); showMap(); });
+$('#btn-music').addEventListener('click', () => { state.music = !state.music; if (state.music) ensureAudio(); else syncAudio(); save(); setHUD(); Audio.sfx('click'); });
+$('#btn-sfx').addEventListener('click', () => { state.sfx = !state.sfx; if (state.sfx) ensureAudio(); else syncAudio(); save(); setHUD(); Audio.sfx('click'); });
+addEventListener('keydown', e => { if (e.key === 'Escape') { if (!drawer.hidden) drawer.hidden = true; } });
+let resizeT = 0; addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (current && current.impl && current.impl.resize) current.impl.resize(); }, 120); });
+addEventListener('pointerdown', () => { if (Audio.active) Audio.resume(); }, { passive: true });
+
+/* debug + hot update + boot */
+window.__game = { gotoLevel: i => showLevel(i), completeLevel: () => current && current.api && current.api.complete(3), get state() { return state; }, auto: false, showMap, showTitle, showRecap: () => showRecap({ correct: 6, total: 6 }), Bessel, Lattice, OpenLattice, get current() { return current; } };
+function start(data) {
+  load(); setHUD();
+  if (data && data.screen === 'level' && Number.isInteger(data.level)) showLevel(data.level);
+  else if (data && data.screen === 'map') showMap();
+  else showTitle();
+}
+try { window.claude?.hot?.snapshot?.(() => ({ screen: state.screen, level: state.level })); } catch (e) { /* no-op */ }
+if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
+</script>
